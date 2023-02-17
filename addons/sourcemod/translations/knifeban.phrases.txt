@@ -1,0 +1,19 @@
+"Phrases"
+{
+	"Boosting"
+	{
+		"en" 	"Boosting Zombies"
+	}
+	"TryingToBoost"
+	{
+		"en" 	"Trying To Boost Zombies"
+	}
+	"Suspicious"
+	{
+		"en" 	"Suspicious Activity"
+	}
+	"No Reason"
+	{
+		"en" 	"No Reason"
+	}
+}
