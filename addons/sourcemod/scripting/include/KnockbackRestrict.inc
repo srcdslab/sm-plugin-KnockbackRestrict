@@ -65,7 +65,7 @@ native bool KR_ClientStatus(int client);
  * @param client  	Client Index
  * @return			Kbans number
  *********************************************************/
-native int KR_GeClientKbansNumber(int client);
+native int KR_GetClientKbansNumber(int client);
 
 
 forward void KR_OnClientKbanned(int client, int admin, int length, const char[] reason, int kbansNumber);

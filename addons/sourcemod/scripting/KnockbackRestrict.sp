@@ -13,7 +13,7 @@
 #define PLUGIN_NAME "KnockbackRestrict"
 #define PLUGIN_AUTHOR "Dolly, Rushaway"
 #define PLUGIN_DESCRIPTION "Adjust knockback of certain weapons for the kbanned players"
-#define PLUGIN_VERSION "3.3.0"
+#define PLUGIN_VERSION "3.3.1"
 #define PLUGIN_URL "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 
 #define KR_Tag "{aqua}[Kb-Restrict]{white}"
@@ -42,7 +42,9 @@ ArrayList g_OfflinePlayers;
 
 ConVar	
 		g_cvDefaultLength,
-		g_cvMaxBanTime;
+		g_cvMaxBanTimeBanFlag,
+		g_cvMaxBanTimeKickFlag,
+		g_cvMaxBanTimeRconFlag;
 		
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -101,24 +103,27 @@ public Plugin myinfo = {
 	url			= PLUGIN_URL
 };
 
-#include "helpers/menus.sp"
+#include "Helpers/menus.sp"
 
 public void OnPluginStart() {
 	/* TRANSLATIONS */
-	LoadTranslations("knockbackrestrict.phrases");
+	LoadTranslations("KbRestrict.phrases");
 	LoadTranslations("common.phrases");
 
 	/* COMMANDS */
-	RegAdminCmd("sm_kban", 			Command_KbRestrict, 		ADMFLAG_BAN, "sm_kban <#userid|name> <minutes|0> [reason]");
-	RegAdminCmd("sm_kunban", 		Command_KbUnRestrict, 		ADMFLAG_BAN, "sm_kunban <#userid|name> [reason]");
-	RegAdminCmd("sm_koban", 		Command_OfflineKbRestrict, 	ADMFLAG_BAN, "sm_koban <#userid|name> <minutes|0> [reason]");
+	RegAdminCmd("sm_kban", 			Command_KbRestrict, 		ADMFLAG_KICK, "sm_kban <#userid|name> <minutes|0> [reason]");
+	RegAdminCmd("sm_kunban", 		Command_KbUnRestrict, 		ADMFLAG_KICK, "sm_kunban <#userid|name> [reason]");
+	RegAdminCmd("sm_koban", 		Command_OfflineKbRestrict, 	ADMFLAG_KICK, "sm_koban <#userid|name> <minutes|0> [reason]");
+	RegAdminCmd("sm_kbanlist",		Command_KbanList,			ADMFLAG_KICK, "Shows the Kban List.");
 	
 	RegConsoleCmd("sm_kstatus", 	Command_CheckKbStatus, "Shows current player Kb-Restrict status");
 	RegConsoleCmd("sm_kbanstatus", Command_CheckKbStatus, "Shows current player Kb-Restrict status");
 
 	/* CVARS */
-	g_cvDefaultLength 	= CreateConVar("sm_kbrestrict_length", "30", "Default length when no length is specified");
-	g_cvMaxBanTime		= CreateConVar("sm_kbrestrict_max_bantime", "133920", "Maximum ban time allowed for non-rcon accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
+	g_cvDefaultLength 			= CreateConVar("sm_kbrestrict_length", "30", "Default length when no length is specified");
+	g_cvMaxBanTimeBanFlag		= CreateConVar("sm_kbrestrict_max_bantime_banflag", "20160", "Maximum ban time allowed for Ban-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
+	g_cvMaxBanTimeKickFlag		= CreateConVar("sm_kbrestrict_max_bantime_kickflag", "720", "Maximum ban time allowed for Kick-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
+	g_cvMaxBanTimeRconFlag		= CreateConVar("sm_kbrestrict_max_bantime_rconflag", "40320", "Maximum ban time allowed for Rcon-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 	
 	AutoExecConfig();
 	
@@ -132,11 +137,12 @@ public void OnPluginStart() {
 
 	/* Prefix */
 	CSetPrefix(KR_Tag);
-
+	
 	/* Forward */
 	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	
+	/* Incase of a late load */
 	for(int i = 1; i <= MaxClients; i++) {
 		if(!IsClientInGame(i)) {
 			continue;
@@ -147,7 +153,6 @@ public void OnPluginStart() {
 		}
 		
 		OnClientPutInServer(i);
-		OnClientPostAdminCheck(i);
 	}
 }
 
@@ -642,6 +647,15 @@ void OnKbanExpired(Database db, DBResultSet results, const char[] error, int id)
 //----------------------------------------------------------------------------------------------------
 // Commands
 //----------------------------------------------------------------------------------------------------
+Action Command_KbanList(int client, int args) {
+	if(!client) {
+		return Plugin_Handled;
+	}
+	
+	Kban_OpenMainMenu(client);
+	return Plugin_Handled;
+}
+
 Action Command_KbRestrict(int client, int args) {
 
 	if(args < 1) {
@@ -682,17 +696,20 @@ Action Command_KbRestrict(int client, int args) {
 		return Plugin_Handled;
 	}
 	
-	/* Check if admin has access to perma ban or a long ban */
-	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
-		if(time == 0 || time >= g_cvMaxBanTime.IntValue) {
-			time = g_cvDefaultLength.IntValue;
-		}
-	}
-	
 	if(g_bIsClientRestricted[target])
 	{
 		CReplyToCommand(client, "%t", "AlreadyKBanned");
 		return Plugin_Handled;
+	}
+	
+	/* Check if admin has access to perma ban or a long ban */
+	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
+		if(time == 0) {
+			time = g_cvDefaultLength.IntValue;
+		}
+		
+		/* Check Admin Access */
+		time = Kban_CheckKbanAdminAccess(client, time);
 	}
 	
 	StripQuotes(reason);
@@ -824,10 +841,13 @@ Action Command_OfflineKbRestrict(int client, int args) {
 	FormatEx(reason, sizeof(reason), Arguments[len]);
 	
 	/* Check if admin has access to perma ban or a long ban */
-	if(!CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
-		if(time == 0 || time >= g_cvMaxBanTime.IntValue) {
+	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
+		if(time == 0) {
 			time = g_cvDefaultLength.IntValue;
 		}
+		
+		/* Check Admin Access */
+		time = Kban_CheckKbanAdminAccess(client, time);
 	}
 	
 	int arrays = Kban_GetOfflineBanResults(arg);
@@ -1597,6 +1617,59 @@ void OnKbanAdded(Database db, DBResultSet results, const char[] error, int array
 										info.clientSteamID, info.clientIP);
 										
 	g_hDB.Query(OnGetKbanID, query, arrayIndex);
+}
+
+int Kban_CheckKbanAdminAccess(int client, int time) {
+	bool hasKickFlag 	= (CheckCommandAccess(client, "sm_kick", ADMFLAG_KICK, true));
+	bool hasBanFlag 	= (CheckCommandAccess(client, "sm_ban", ADMFLAG_BAN, true));
+	bool hasRconFlag 	= (CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true));
+	
+	ConVar cvar;
+	if(hasKickFlag && !hasBanFlag && !hasRconFlag) {
+		cvar = g_cvMaxBanTimeKickFlag;
+	} else if(hasBanFlag && !hasRconFlag) {
+		cvar = g_cvMaxBanTimeBanFlag;
+	} else if(hasRconFlag) {
+		cvar = g_cvMaxBanTimeRconFlag;
+	}
+	
+	if(cvar == null) {
+		// this should never happen
+		return g_cvDefaultLength.IntValue;
+	}
+	
+	if(time > cvar.IntValue) {
+		time = cvar.IntValue;
+	}
+	
+	return time;
+}
+
+bool Kban_CheckKbanMaxLength(int client, int time) {
+	bool hasRootFlag	= (CheckCommandAccess(client, "sm_root", ADMFLAG_ROOT, true));
+	
+	if(hasRootFlag) {
+		return true;
+	}
+	
+	bool hasKickFlag 	= (CheckCommandAccess(client, "sm_kick", ADMFLAG_KICK, true));
+	bool hasBanFlag 	= (CheckCommandAccess(client, "sm_ban", ADMFLAG_BAN, true));
+	bool hasRconFlag 	= (CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true));
+	
+	ConVar cvar;
+	if(hasKickFlag && !hasBanFlag && !hasRconFlag) {
+		cvar = g_cvMaxBanTimeKickFlag;
+	} else if(hasBanFlag && !hasRconFlag) {
+		cvar = g_cvMaxBanTimeBanFlag;
+	} else if(hasRconFlag) {
+		cvar = g_cvMaxBanTimeRconFlag;
+	}
+	
+	if(time > cvar.IntValue) {
+		return false;
+	}
+	
+	return true;
 }
 
 void OnGetKbanID(Database db, DBResultSet results, const char[] error, int arrayIndex) {

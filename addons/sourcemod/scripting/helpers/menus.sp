@@ -599,14 +599,18 @@ void DisplayLengths_Menu(int client)
 	char LengthBufferP[64], LengthBufferT[64];
 	FormatEx(LengthBufferP, sizeof(LengthBufferP), "%s", "Permanently");
 	FormatEx(LengthBufferT, sizeof(LengthBufferT), "%s", "Temporary");
-
-	menu.AddItem("0", LengthBufferP, CheckCommandAccess(client, "sm_koban", ADMFLAG_RCON, true) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+	
+	menu.AddItem("0", LengthBufferP, CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 	menu.AddItem("-1", LengthBufferT);
 	
 	for(int i = 15; i >= 15 && i < 241920; i++)
 	{
 		if(i == 15 || i == 30 || i == 45)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			FormatEx(text, sizeof(text), "%d %s", i, "Minutes");
@@ -614,6 +618,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 60)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int hour = (i / 60);
@@ -622,6 +630,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 120 || i == 240 || i == 480 || i == 720)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+				
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int hour = (i / 60);
@@ -630,6 +642,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 1440)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int day = (i / 1440);
@@ -638,6 +654,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int day = (i / 1440);
@@ -646,6 +666,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 10080)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int week = (i / 10080);
@@ -654,6 +678,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 20160 || i == 30240)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int week = (i / 10080);
@@ -662,6 +690,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 40320)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int month = (i / 40320);
@@ -670,6 +702,10 @@ void DisplayLengths_Menu(int client)
 		}
 		else if(i == 80640 || i == 120960 || i == 241920)
 		{
+			if(!Kban_CheckKbanMaxLength(client, i)) {
+				continue;
+			}
+			
 			char buffer[32], text[32];
 			IntToString(i, buffer, sizeof(buffer));
 			int month = (i / 40320);
