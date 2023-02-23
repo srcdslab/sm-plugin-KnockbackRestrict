@@ -107,7 +107,7 @@ public Plugin myinfo = {
 
 public void OnPluginStart() {
 	/* TRANSLATIONS */
-	LoadTranslations("KbRestrict.phrases");
+	LoadTranslations("knockbackrestrict.phrases");
 	LoadTranslations("common.phrases");
 
 	/* COMMANDS */
