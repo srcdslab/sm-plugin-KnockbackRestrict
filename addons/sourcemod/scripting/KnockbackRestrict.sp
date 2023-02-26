@@ -103,7 +103,7 @@ public Plugin myinfo = {
 	url			= PLUGIN_URL
 };
 
-#include "Helpers/menus.sp"
+#include "helpers/menus.sp"
 
 public void OnPluginStart() {
 	/* TRANSLATIONS */
