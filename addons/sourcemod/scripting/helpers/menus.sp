@@ -794,7 +794,6 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 	{
 		case MenuAction_End:
 		{
-			g_bIsClientTypingReason[param1] = false;
 			delete menu;
 		}
 		
