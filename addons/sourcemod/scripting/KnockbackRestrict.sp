@@ -151,8 +151,6 @@ public void OnPluginStart() {
 		
 		OnClientPutInServer(i);
 	}
-
-	g_bLate = false;
 }
 
 /***********************************/
