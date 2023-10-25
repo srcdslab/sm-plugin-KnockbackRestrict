@@ -13,7 +13,7 @@
 #define PLUGIN_NAME "KnockbackRestrict"
 #define PLUGIN_AUTHOR "Dolly, Rushaway"
 #define PLUGIN_DESCRIPTION "Adjust knockback of certain weapons for the kbanned players"
-#define PLUGIN_VERSION "3.3.1"
+#define PLUGIN_VERSION "3.3.2"
 #define PLUGIN_URL "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 
 #define KR_Tag "{aqua}[Kb-Restrict]{white}"
@@ -32,7 +32,8 @@ int
 bool 
 	g_bKnifeModeEnabled,
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
-	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... };
+	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
+	g_bLate = false;
 	
 
 Database g_hDB;
@@ -138,10 +139,6 @@ public void OnPluginStart() {
 	/* Prefix */
 	CSetPrefix(KR_Tag);
 	
-	/* Forward */
-	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
-	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
-	
 	/* Incase of a late load */
 	for(int i = 1; i <= MaxClients; i++) {
 		if(!IsClientInGame(i)) {
@@ -159,12 +156,18 @@ public void OnPluginStart() {
 /***********************************/
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	RegPluginLibrary("KbRestrict");
+	g_bLate = late;
+
+	RegPluginLibrary("KnockbackRestrict");
 
 	CreateNative("KR_BanClient", Native_KR_BanClient);
 	CreateNative("KR_UnBanClient", Native_KR_UnBanClient);
 	CreateNative("KR_ClientStatus", Native_KR_ClientStatus);
 	CreateNative("KR_GetClientKbansNumber", Native_KR_GetClientKbansNumber);
+
+	/* Forward */
+	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
+	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	
 	return APLRes_Success;
 }
@@ -552,19 +555,37 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 
 	/* Knife */
 	if (StrEqual(sWeapon, "weapon_knife"))
-		damage -= (damage * 0.95);
+		damage -= (damage * 0.98);
+	
+	/* Pistols */
+	if (StrEqual(sWeapon, "weapon_deagle"))
+		damage -= (damage * 0.50);
+
+	/* SMG's */
+	if (StrEqual(sWeapon, "weapon_mac10") || StrEqual(sWeapon, "weapon_tmp") || StrEqual(sWeapon, "weapon_mp5navy")
+		|| StrEqual(sWeapon, "weapon_ump45") || StrEqual(sWeapon, "weapon_p90"))
+		damage -= (damage * 0.30);
+
+	/* Rifles */
+	if (StrEqual(sWeapon, "weapon_galil") || StrEqual(sWeapon, "weapon_famas") || StrEqual(sWeapon, "weapon_ak47")
+		|| StrEqual(sWeapon, "weapon_m4a1") || StrEqual(sWeapon, "weapon_sg552") || StrEqual(sWeapon, "weapon_aug") || StrEqual(sWeapon, "weapon_m249"))
+		damage -= (damage * 0.50);
 
 	/* ShotGuns */
 	if (StrEqual(sWeapon, "weapon_m3") || StrEqual(sWeapon, "weapon_xm1014"))
-		damage -= (damage * 0.80);
+		damage -= (damage * 0.85);
 
 	/* Snipers */
 	if (StrEqual(sWeapon, "weapon_awp") || StrEqual(sWeapon, "weapon_scout"))
-		damage -= (damage * 0.60);
+		damage -= (damage * 0.80);
 
 	/* Semi-Auto Snipers */
 	if (StrEqual(sWeapon, "weapon_sg550") || StrEqual(sWeapon, "weapon_g3sg1"))
-		damage -= (damage * 0.40);
+		damage -= (damage * 0.70);
+	
+	/* Grenades */
+	if (StrEqual(sWeapon, "weapon_hegrenade"))
+		damage -= (damage * 0.95);
 
 	return Plugin_Changed;
 }
@@ -1097,13 +1118,15 @@ void OnGetAllKbans(Database db, DBResultSet results, const char[] error, any dat
  	}
  	
  	/* incase of a late load */
- 	for(int i = 1; i <= MaxClients; i++) {
-		if(!IsClientInGame(i)) {
-			continue;
+ 	if(g_bLate) {
+	 	for(int i = 1; i <= MaxClients; i++) {
+			if(!IsClientInGame(i)) {
+				continue;
+			}
+			
+			OnClientConnected(i);
+			OnClientPostAdminCheck(i);
 		}
-		
-		OnClientConnected(i);
-		OnClientPostAdminCheck(i);
 	}
 }
 
