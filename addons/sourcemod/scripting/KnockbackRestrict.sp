@@ -10,6 +10,10 @@
 #include <KnockbackRestrict>
 
 #define KR_Tag "{aqua}[Kb-Restrict]{white}"
+#define NOSTEAMID "NO STEAMID"
+#define MAX_IP_LENGTH 16
+#define MAX_QUERIE_LENGTH 2000
+#define REASON_MAX_LENGTH 128
 
 GlobalForward g_hKbanForward;
 GlobalForward g_hKunbanForward;
@@ -28,6 +32,12 @@ bool
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
 	g_bLate = false;
 
+char 
+	g_sMapName[PLATFORM_MAX_PATH],
+	g_sName[MAXPLAYERS+1][MAX_NAME_LENGTH],
+	g_sSteamIDs[MAXPLAYERS+1][MAX_AUTHID_LENGTH],
+	g_sIPs[MAXPLAYERS+1][MAX_IP_LENGTH];
+
 Database g_hDB;
 
 ArrayList g_allKbans;
@@ -37,7 +47,8 @@ ConVar
 		g_cvDefaultLength,
 		g_cvMaxBanTimeBanFlag,
 		g_cvMaxBanTimeKickFlag,
-		g_cvMaxBanTimeRconFlag;
+		g_cvMaxBanTimeRconFlag,
+		g_cvSaveTempBans;
 
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -67,14 +78,14 @@ enum KbanType {
 
 enum struct Kban {
 	int id;
-	char clientName[32];
-	char clientSteamID[20];
-	char clientIP[20];
-	char adminName[32];
-	char adminSteamID[20];
+	char clientName[MAX_NAME_LENGTH];
+	char clientSteamID[MAX_AUTHID_LENGTH];
+	char clientIP[MAX_IP_LENGTH];
+	char adminName[MAX_NAME_LENGTH];
+	char adminSteamID[MAX_AUTHID_LENGTH];
 
-	char reason[128];
-	char map[120];
+	char reason[REASON_MAX_LENGTH];
+	char map[PLATFORM_MAX_PATH];
 
 	int time_stamp_start;
 	int time_stamp_end;
@@ -83,20 +94,21 @@ enum struct Kban {
 
 enum struct OfflinePlayer {
 	int userid;
-	char name[32];
-	char steamID[20];
-	char ip[20];
+	char name[MAX_NAME_LENGTH];
+	char steamID[MAX_AUTHID_LENGTH];
+	char ip[MAX_IP_LENGTH];
 }
 
 public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.3.3",
+	version 	= "3.4.0",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
 #include "helpers/menus.sp"
+#include "helpers/upgrade.sp"
 
 public void OnPluginStart() {
 	/* TRANSLATIONS */
@@ -110,7 +122,8 @@ public void OnPluginStart() {
 	RegAdminCmd("sm_kbanlist",		Command_KbanList,			ADMFLAG_KICK, "Shows the Kban List.");
 
 	RegConsoleCmd("sm_kstatus", 	Command_CheckKbStatus, "Shows current player Kb-Restrict status");
-	RegConsoleCmd("sm_kbanstatus", Command_CheckKbStatus, "Shows current player Kb-Restrict status");
+	RegConsoleCmd("sm_kbstatus", 	Command_CheckKbStatus, "Shows current player Kb-Restrict status");
+	RegConsoleCmd("sm_kbanstatus", 	Command_CheckKbStatus, "Shows current player Kb-Restrict status");
 
 	/* CVARS */
 	g_cvDefaultLength 			= CreateConVar("sm_kbrestrict_length", "30", "Default length when no length is specified");
@@ -118,7 +131,12 @@ public void OnPluginStart() {
 	g_cvMaxBanTimeKickFlag		= CreateConVar("sm_kbrestrict_max_bantime_kickflag", "720", "Maximum ban time allowed for Kick-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 	g_cvMaxBanTimeRconFlag		= CreateConVar("sm_kbrestrict_max_bantime_rconflag", "40320", "Maximum ban time allowed for Rcon-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 
+	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
+
 	AutoExecConfig();
+
+	/* HOOK EVENTS */
+	HookEvent("player_changename", Event_OnPlayerName, EventHookMode_Post);
 
 	/* CONNECT TO DB */
 	ConnectToDB();
@@ -145,6 +163,9 @@ public void OnPluginStart() {
 			OnClientPutInServer(i);
 		}
 	}
+
+	// Root cmd for upgrade sql structure from 3.3.x to 3.4+ (Fix buffer size)
+	OnPluginStart_Upgrade();
 }
 
 /***********************************/
@@ -167,7 +188,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 }
 
 int Native_KR_BanClient(Handle plugin, int params) {
-	char reason[128];
+	char reason[REASON_MAX_LENGTH];
 
 	int admin = GetNativeCell(1);
 	int client = GetNativeCell(2);
@@ -182,7 +203,7 @@ int Native_KR_BanClient(Handle plugin, int params) {
 }
 
 int Native_KR_UnBanClient(Handle plugin, int params) {
-	char reason[128];
+	char reason[REASON_MAX_LENGTH];
 
 	int admin = GetNativeCell(1);
 	int client = GetNativeCell(2);
@@ -215,10 +236,13 @@ int Native_KR_GetClientKbansNumber(Handle plugin, int params) {
 public void OnMapStart() {
 	/* ARRAYLIST */
 	delete g_allKbans;
-	g_allKbans = new ArrayList(ByteCountToCells(512));
+	g_allKbans = new ArrayList(ByteCountToCells(2048));
 
 	delete g_OfflinePlayers;
-	g_OfflinePlayers = new ArrayList(ByteCountToCells(100));
+	g_OfflinePlayers = new ArrayList(ByteCountToCells(512));
+
+	/* MAP NAME */
+	GetCurrentMap(g_sMapName, sizeof(g_sMapName));
 
 	/* GET ALL KBANS */
 	CreateTimer(1.0, GetAllKbans_Timer);
@@ -232,7 +256,7 @@ public void OnMapEnd() {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
 		if(info.time_stamp_end < 0 || info.length < 0) {
-			char query[80];
+			char query[MAX_QUERIE_LENGTH];
 			g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1 WHERE `id`=%d", info.id);
 			g_hDB.Query(OnKbanRemove, query);
 		}
@@ -244,36 +268,18 @@ public void OnClientPutInServer(int client) {
 }
 
 public void OnClientPostAdminCheck(int client) {
-	if(g_allKbans == null) {
-		return;
-	}
-
-	if(g_OfflinePlayers == null) {
-		return;
-	}
-
-	if(IsFakeClient(client) || IsClientSourceTV(client)) {
-		return;
-	}
-
-	char ip[20];
-	if(!GetClientIP(client, ip, sizeof(ip))) {
+	if(IsFakeClient(client) || IsClientSourceTV(client) || g_allKbans == null || g_OfflinePlayers == null) {
 		return;
 	}
 	
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
-	
-	char queryEx[300];
-	g_hDB.Format(queryEx, sizeof(queryEx), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' OR `client_ip`='%s'", steamID, ip);
+	char queryEx[MAX_QUERIE_LENGTH];
+	g_hDB.Format(queryEx, sizeof(queryEx), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' OR `client_ip`='%s'", g_sSteamIDs[client], g_sIPs[client]);
 	g_hDB.Query(OnClientPostAdminCheck_Query, queryEx, GetClientUserId(client));
 	
 	for(int i = 0; i < g_OfflinePlayers.Length; i++) {
 		OfflinePlayer player;
 		g_OfflinePlayers.GetArray(i, player, sizeof(player));
-		if(StrEqual(player.steamID, steamID)) {
+		if(strcmp(player.steamID, g_sSteamIDs[client], false) == 0) {
 			g_OfflinePlayers.Erase(i);
 			break;
 		}
@@ -283,13 +289,14 @@ public void OnClientPostAdminCheck(int client) {
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.clientIP, ip)) {
-			if(StrEqual(info.clientSteamID, "NO STEAMID", false)) {
-				FormatEx(info.clientSteamID, 20, steamID);
+		if(strcmp(info.clientIP, g_sIPs[client], false) == 0) {
+			if(strcmp(info.clientSteamID, NOSTEAMID, false) == 0) {
+
+				FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), g_sSteamIDs[client]);
 				g_allKbans.SetArray(i, info, sizeof(info));
 
-				char query[100];
-				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d", steamID, info.id);
+				char query[MAX_QUERIE_LENGTH];
+				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d", g_sSteamIDs[client], info.id);
 				g_hDB.Query(OnKbanAdded, query);
 			}
 
@@ -312,16 +319,6 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 		return;
 	}
 
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
-
-	char clientIP[20];
-	if(!GetClientIP(client, clientIP, sizeof(clientIP))) {
-		return;
-	}
-
 	bool isKbanned = false;
 	Kban tempInfo;
 
@@ -339,18 +336,18 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 			}
 
 			/* Check if ip is not known */
-			if(StrEqual(tempInfo.clientIP, "Unknown", false)) {
+			if(strcmp(tempInfo.clientIP, "Unknown", false) == 0) {
 				/* Update IP to DB */
-				char query[120];
-				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", clientIP, tempInfo.id);
+				char query[MAX_QUERIE_LENGTH];
+				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", g_sIPs[client], tempInfo.id);
 				g_hDB.Query(OnUpdateClientIP, query);
 
-				FormatEx(tempInfo.clientIP, 20, "%s", clientIP);
+				FormatEx(tempInfo.clientIP, sizeof(Kban::clientIP), "%s", g_sIPs[client]);
 				for(int i = 0; i < g_allKbans.Length; i++) {
 					Kban exInfo;
 					g_allKbans.GetArray(i, exInfo, sizeof(exInfo));
 					if(exInfo.id == tempInfo.id) {
-						FormatEx(exInfo.clientIP, 20, "%s", tempInfo.clientIP);
+						FormatEx(exInfo.clientIP, sizeof(Kban::clientIP), "%s", tempInfo.clientIP);
 						g_allKbans.SetArray(i, exInfo, sizeof(exInfo));
 						break;
 					}
@@ -382,11 +379,11 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 
 		Kban kbanInfo;
 		if(type == KBAN_TYPE_IP) {
-			if(!Kban_GetKban(KBAN_GET_TYPE_IP, kbanInfo, _, _, clientIP)) {
+			if(!Kban_GetKban(KBAN_GET_TYPE_IP, kbanInfo, _, _, g_sIPs[client])) {
 				return;
 			}
 		} else {
-			if(!Kban_GetKban(KBAN_GET_TYPE_STEAMID, kbanInfo, _, steamID)) {
+			if(!Kban_GetKban(KBAN_GET_TYPE_STEAMID, kbanInfo, _, g_sSteamIDs[client])) {
 				return;
 			}
 		}
@@ -410,13 +407,8 @@ void OnUpdateClientIP(Database db, DBResultSet results, const char[] error, int 
 }
 
 void Kban_CallGetKbansNumber(int client) {
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
-
-	char query[150];
-	g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", steamID);
+	char query[MAX_QUERIE_LENGTH];
+	g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", g_sSteamIDs[client]);
 	g_hDB.Query(OnGetKbansNumber, query, GetClientUserId(client));
 }
 
@@ -445,7 +437,7 @@ void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int 
 			continue;
 		}
 
-		if(CheckCommandAccess(i, "sm_admin", ADMFLAG_BAN, true)) {
+		if(CheckCommandAccess(i, "sm_admin", ADMFLAG_KICK, true)) {
 			CPrintToChat(i, "%t", "PlayerConnect", client, count);
 		}
 	}
@@ -453,29 +445,33 @@ void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int 
 	g_iClientKbansNumber[client] = count;
 }
 
+public Action Event_OnPlayerName(Handle event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(GetEventInt(event, "userid"));
+	if (client > 0 && IsClientInGame(client) && !IsFakeClient(client) && !IsClientSourceTV(client))
+		GetEventString(event, "newname", g_sName[client], sizeof(g_sName[]));
+	return Plugin_Continue;
+}
+
 public void OnClientConnected(int client) {
-	if(IsFakeClient(client) || IsClientSourceTV(client)) {
-		return;
+	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
+	// Can't get client data, restrict him by default.
+	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
+		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
+		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
+		strcopy(sName, sizeof(sName), "Unknown");
+		g_bIsClientRestricted[client] = true;
 	}
 
-	if(g_bIsClientRestricted[client]) {
-		return;
-	}
+	// Initialize client data
+	g_bIsClientRestricted[client] = false;
+	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), sIP);
+	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
+	FormatEx(g_sName[client], sizeof(g_sName[]), sName);
 
-	char ip[20];
-	if(!GetClientIP(client, ip, sizeof(ip))) {
-		return;
+	if(IsIPBanned(g_sIPs[client])) {
+		g_bIsClientRestricted[client] = true;
 	}
-
-	if(g_allKbans == null) {
-		return;
-	}
-
-	if(!IsIPBanned(ip)) {
-		return;
-	}
-
-	g_bIsClientRestricted[client] = true;
 }
 
 public void OnClientDisconnect(int client) {
@@ -483,45 +479,33 @@ public void OnClientDisconnect(int client) {
 		return;
 	}
 
-	g_bIsClientRestricted[client] = false;
-	g_iClientKbansNumber[client] = 0;
-
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
-
-	char name[32];
-	if(!GetClientName(client, name, sizeof(name))) {
-		return;
-	}
-
-	char ip[20];
-	if(!GetClientIP(client, ip, sizeof(ip))) {
-		return;
-	}
-
 	OfflinePlayer player;
 	player.userid = GetClientUserId(client);
-	FormatEx(player.steamID, sizeof(OfflinePlayer::steamID), steamID);
-	FormatEx(player.ip, sizeof(OfflinePlayer::ip), ip);
-	FormatEx(player.name, sizeof(OfflinePlayer::name), name);
+	FormatEx(player.steamID, sizeof(OfflinePlayer::steamID), g_sSteamIDs[client]);
+	FormatEx(player.ip, sizeof(OfflinePlayer::ip), g_sIPs[client]);
+	FormatEx(player.name, sizeof(OfflinePlayer::name), g_sName[client]);
 
 	g_OfflinePlayers.PushArray(player, sizeof(player));
+
+	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), "");
+	FormatEx(g_sName[client], sizeof(g_sName[]), "");
+	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), "");
+	g_bIsClientRestricted[client] = false;
+	g_iClientKbansNumber[client] = 0;
 }
 
 public void OnLibraryAdded(const char[] name) {
-	if(StrEqual(name, "KnifeMode")) {
+	if (strcmp(name, "KnifeMode", false) == 0) {
 		g_bKnifeModeEnabled = true;
 	}
 }
 
 public void OnLibraryRemoved(const char[] name) {
-	if(StrEqual(name, "KnifeMode")) {
+	if (strcmp(name, "KnifeMode", false) == 0) {
 		g_bKnifeModeEnabled = false;
 	}
 
-	if(StrEqual(name, "adminmenu")) {
+	if (strcmp(name, "adminmenu", false) == 0) {
 		g_hAdminMenu = null;
 	}
 }
@@ -595,7 +579,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 		g_allKbans.GetArray(i, info, sizeof(info));
 		if(info.time_stamp_end > 0 && info.time_stamp_end < GetTime()) {
 			/* We want to unban this dude, check if the player is in game first by either steamid or ip */
-			char query[100];
+			char query[MAX_QUERIE_LENGTH];
 			g_hDB.Format(query, sizeof(query), "SELECT `time_stamp_end` FROM `KbRestrict_CurrentBans` WHERE `id`=%d", info.id);
 			g_hDB.Query(OnKbanExpired, query, info.id);
 		}
@@ -622,7 +606,7 @@ void OnKbanExpired(Database db, DBResultSet results, const char[] error, int id)
 		}
 
 		if(time_stamp_end < GetTime()) {
-			char query[100];
+			char query[MAX_QUERIE_LENGTH];
 			g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1 WHERE `id`=%d", info.id);
 			g_hDB.Query(OnKbanRemove, query);
 
@@ -633,8 +617,7 @@ void OnKbanExpired(Database db, DBResultSet results, const char[] error, int id)
 					g_allKbans.Erase(i);
 				}
 			}
-
-			if(StrEqual(info.clientSteamID, "NO STEAMID")) {
+			if(strcmp(info.clientSteamID, NOSTEAMID, false) == 0) {
 				int client = Kban_GetClientByIP(info.clientIP);
 				if(client != -1) {
 					g_bIsClientRestricted[client] = false;
@@ -704,7 +687,7 @@ Action Command_KbRestrict(int client, int args) {
 		time = g_cvDefaultLength.IntValue;
 	}
 
-	char reason[128];
+	char reason[REASON_MAX_LENGTH];
 	FormatEx(reason, sizeof(reason), Arguments[len]);
 
 	int target = FindTarget(client, arg, false, false);
@@ -771,41 +754,31 @@ Action Command_KbUnRestrict(int client, int args) {
 		return Plugin_Handled;
 	}
 
-	char reason[128];
+	char reason[REASON_MAX_LENGTH];
 	FormatEx(reason, sizeof(reason), Arguments[len]);
 
-	char adminSteamID[20];
+	char adminSteamID[MAX_AUTHID_LENGTH];
 	if(!client) {
 		adminSteamID = "Console";
 	} else {
-		if(!GetClientAuthId(client, AuthId_Steam2, adminSteamID, sizeof(adminSteamID))) {
-			return Plugin_Handled;
-		}
+		adminSteamID = g_sSteamIDs[client];
 	}
 
 	Kban info;
 
 	KbanType type = Kban_GetClientKbanType(target);
 	if(type == KBAN_TYPE_STEAMID) {
-		char targetSteamID[20];
-		if(GetClientAuthId(target, AuthId_Steam2, targetSteamID, sizeof(targetSteamID))) {
-			Kban_GetKban(KBAN_GET_TYPE_STEAMID, info, _, targetSteamID);
-		}
+		Kban_GetKban(KBAN_GET_TYPE_STEAMID, info, _, g_sSteamIDs[target]);
 	} else {
-		char ip[20];
-		if(!GetClientIP(target, ip, sizeof(ip))) {
-			return Plugin_Handled;
-		}
-		
-		Kban_GetKban(KBAN_GET_TYPE_IP, info, _, _, ip);
+		Kban_GetKban(KBAN_GET_TYPE_IP, info, _, _, g_sIPs[target]);
 	}
 
 	bool canUnban = false;
-	if(StrEqual(adminSteamID, "Console") || CheckCommandAccess(client, "sm_admin", ADMFLAG_RCON, true)) {
+	if (strcmp(adminSteamID, "Console", false) == 0 || CheckCommandAccess(client, "sm_admin", ADMFLAG_RCON, true)) {
 		canUnban = true;
 	}
 
-	if(!canUnban && StrEqual(info.adminSteamID, adminSteamID)) {
+	if (!canUnban && strcmp(info.adminSteamID, adminSteamID, false) == 0) {
 		canUnban = true;
 	}
 
@@ -853,7 +826,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 		time = g_cvDefaultLength.IntValue;
 	}
 
-	char reason[128];
+	char reason[REASON_MAX_LENGTH];
 	FormatEx(reason, sizeof(reason), Arguments[len]);
 	
 	/* Check if admin has access to perma ban or a long ban */
@@ -887,7 +860,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.clientSteamID, player.steamID) || StrEqual(info.clientIP, player.ip)) {
+		if(strcmp(info.clientSteamID, player.steamID, false) == 0 || strcmp(info.clientIP, player.ip, false) == 0) {
 			CReplyToCommand(client, "%t", "AlreadyKBanned");
 			return Plugin_Handled;
 		}
@@ -898,70 +871,46 @@ Action Command_OfflineKbRestrict(int client, int args) {
 }
 
 void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reason) {
-	if(!reason[0]) {
-		FormatEx(reason, 128, "Trying To Boost");
-	}
-
-	char steamID[20];
-	char adminName[32];
-	if(admin < 1) {
-		steamID = "Console";
-		adminName = "Console";
-	} else {
-		if(!GetClientAuthId(admin, AuthId_Steam2, steamID, sizeof(steamID))) {
-			return;
-		}
-
-		if(!GetClientName(admin, adminName, sizeof(adminName))) {
-			return;
-		}
-	}
-
 	Kban info;
+	if (length < 0) {
+		length = g_cvDefaultLength.IntValue;
+	}
+
+	if(!reason[0]) {
+		FormatEx(reason, sizeof(Kban::reason), "Trying To Boost");
+	}
+
+	char steamID[MAX_AUTHID_LENGTH], adminName[MAX_NAME_LENGTH];
+	FormatEx(steamID, sizeof(steamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
+	FormatEx(adminName, sizeof(adminName), admin < 1 ? "Console" : g_sName[admin]);
+
+	FormatEx(info.clientName, sizeof(Kban::clientName), player.name);
+	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), player.steamID);
+	FormatEx(info.clientIP, sizeof(Kban::clientIP), player.ip);
+	FormatEx(info.adminName, sizeof(Kban::adminName), adminName);
+	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), steamID);
+	FormatEx(info.reason, sizeof(Kban::reason), reason);
+	FormatEx(info.map, sizeof(Kban::map), g_sMapName);
+
 	info.length = length;
 	info.time_stamp_start = GetTime();
-	
 	if(length > 0) {
-		/* Normal */
-		info.time_stamp_end = (GetTime() + (length * 60));
+		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
 	} else if(length == 0) {
-		/* Permanent */
-		info.time_stamp_end = 0;
-	} else {
-		/* Session */
-		info.time_stamp_end = -1;
+		info.time_stamp_end = 0; // Permanent
 	}
 
-	FormatEx(info.clientName, 32, player.name);
-	FormatEx(info.clientSteamID, 20, player.steamID);
-	FormatEx(info.clientIP, 20, player.ip);
-	FormatEx(info.adminName, 32, adminName);
-	FormatEx(info.adminSteamID, 20, steamID);
-	FormatEx(info.reason, 128, reason);
-
-	if(!GetCurrentMap(info.map, 120)) {
-		return;
-	}
-
-	int arrayIndex = g_allKbans.Length;
-	g_allKbans.PushArray(info, sizeof(info));
+	// Edit ID purpose
+	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 	
-	char escapedTargetName[32 * 2 + 1];
-	char escapedAdminName[32 * 2 + 1];
-	char escapedReason[128 * 2 + 1];
-	if(!g_hDB.Escape(adminName, escapedAdminName, sizeof(escapedAdminName))) {
+	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1];
+	if(!g_hDB.Escape(adminName, escapedAdminName, sizeof(escapedAdminName))
+		|| !g_hDB.Escape(player.name, escapedTargetName, sizeof(escapedTargetName))
+		|| !g_hDB.Escape(reason, escapedReason, sizeof(escapedReason))) {
 		return;
 	}
 
-	if(!g_hDB.Escape(player.name, escapedTargetName, sizeof(escapedTargetName))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(reason, escapedReason, sizeof(escapedReason))) {
-		return;
-	}
-
-	char query[2000];
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
 										... "`client_name`, `client_steamid`, `client_ip`,"
 										... "`admin_name`, `admin_steamid`, `reason`,"
@@ -1009,53 +958,58 @@ int Kban_GetOfflineBanResults(const char[] arg) {
 }
 
 Action Command_CheckKbStatus(int client, int args) {
-	if(!client) {
+	int target = -1;
+
+	if(args < 1 || !CheckCommandAccess(client, "sm_kban", ADMFLAG_KICK, true)) {
+		target = client;
+	} else {
+		char sArg[MAX_NAME_LENGTH];
+		GetCmdArg(1, sArg, sizeof(sArg));
+		target = FindTarget(client, sArg, false, true);
+	}
+
+	SetGlobalTransTarget(client);
+
+	if(target == -1) {
+		CReplyToCommand(client, "%t", "Player no longer available");
 		return Plugin_Handled;
 	}
 
-	if(!g_bIsClientRestricted[client]) {
-		CReplyToCommand(client, "%t", "PlayerNotRestricted");
+	if(!g_bIsClientRestricted[target]) {
+		CReplyToCommand(client, "%t", "PlayerNotRestricted", g_sName[target]);
 		return Plugin_Handled;
 	}
 
 	Kban info;
-	char steamID[20];
-
-	KbanType type = Kban_GetClientKbanType(client);
+	KbanType type = Kban_GetClientKbanType(target);
 	if(type == KBAN_TYPE_STEAMID) {
-		if(GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-			Kban_GetKban(KBAN_GET_TYPE_STEAMID, info, _, steamID);
-		}
+		Kban_GetKban(KBAN_GET_TYPE_STEAMID, info, _, g_sSteamIDs[target]);
 	} else {
-		char ip[20];
-		if(GetClientIP(client, ip, sizeof(ip))) {
-			Kban_GetKban(KBAN_GET_TYPE_IP, info, _, _, ip);
-		}
+		Kban_GetKban(KBAN_GET_TYPE_IP, info, _, _, g_sIPs[target]);
 	}
 
 	switch(info.length) {
 		case 0: {
-			CReplyToCommand(client, "%t\n%s Reason: {olive}%s.", "PlayerRestrictedPerma", KR_Tag, info.reason);
-			return Plugin_Handled;
+			CReplyToCommand(target, "%t", "PlayerRestrictedPerma", g_sName[target]);
 		}
 
 		case -1: {
-			CReplyToCommand(client, "%t\n%s Reason: {olive}%s.", "PlayerRestrcitedTemp", KR_Tag, info.reason);
-			return Plugin_Handled;
+			CReplyToCommand(target, "%t", "PlayerRestrcitedTemp", g_sName[target]);
 		}
 
 		default: {
-			int timeLeft = (info.time_stamp_end - GetTime());
 			char sTimeLeft[32];
-			CheckPlayerExpireTime(timeLeft, sTimeLeft, sizeof(sTimeLeft));
-			CReplyToCommand(client, "%t\n%s Reason: {olive}%s.", "RestrictTimeLeft", sTimeLeft, KR_Tag, info.reason);
-			return Plugin_Handled;
+			CheckPlayerExpireTime(info.time_stamp_end - GetTime(), sTimeLeft, sizeof(sTimeLeft));
+			CReplyToCommand(target, "%t", "RestrictTimeLeft", g_sName[target], sTimeLeft);
 		}
 	}
+
+	CReplyToCommand(target, "{white}%t", "Reason", info.reason);
+
+	return Plugin_Handled;
 }
 
-stock void CheckPlayerExpireTime(int lefttime, char[] TimeLeft, int maxlength)
-{
+stock void CheckPlayerExpireTime(int lefttime, char[] TimeLeft, int maxlength) {
 	if(lefttime > -1)
 	{
 		if(lefttime < 60) // 60 secs
@@ -1132,31 +1086,31 @@ void Kban_GetRowResults(int num, DBResultSet results, Kban info) {
 		}
 
 		case 1: {
-			results.FetchString(num, info.clientName, 32);
+			results.FetchString(num, info.clientName, sizeof(Kban::clientName));
 		}
 
 		case 2: {
-			results.FetchString(num, info.clientSteamID, 20);
+			results.FetchString(num, info.clientSteamID, sizeof(Kban::clientSteamID));
 		}
 
 		case 3: {
-			results.FetchString(num, info.clientIP, 20);
+			results.FetchString(num, info.clientIP, sizeof(Kban::clientIP));
 		}
 
 		case 4: {
-			results.FetchString(num, info.adminName, 32);
+			results.FetchString(num, info.adminName, sizeof(Kban::adminName));
 		}
 
 		case 5: {
-			results.FetchString(num, info.adminSteamID, 20);
+			results.FetchString(num, info.adminSteamID, sizeof(Kban::adminSteamID));
 		}
 
 		case 6: {
-			results.FetchString(num, info.reason, 128);
+			results.FetchString(num, info.reason, sizeof(Kban::reason));
 		}
 
 		case 7: {
-			results.FetchString(num, info.map, 120);
+			results.FetchString(num, info.map, sizeof(Kban::map));
 		}
 
 		case 8: {
@@ -1216,57 +1170,66 @@ void DB_CreateTables() {
 
 	char driver[10];
 	g_hDB.Driver.GetIdentifier(driver, sizeof(driver));
-	if(!StrEqual(driver, "mysql")) {
+	if(strcmp(driver, "mysql", false) != 0) {
 		LogError("[Kb-Restrict] drivers other than mysql are not supported.");
 		return;
 	}
 
-	char query[1024];
+	char query[MAX_QUERIE_LENGTH];
 	Transaction T_Tables = SQL_CreateTransaction();
 
-	g_hDB.Format(query, sizeof(query), "  CREATE TABLE IF NOT EXISTS `KbRestrict_CurrentBans` ( \
-										  `id` int(11) unsigned NOT NULL AUTO_INCREMENT, \
-										  `client_name` varchar(64) NOT NULL, \
-										  `client_steamid` varchar(32) NOT NULL, \
-										  `client_ip` varchar(32) NOT NULL, \
-										  `admin_name` varchar(64) NOT NULL, \
-										  `admin_steamid` varchar(32) NOT NULL, \
-										  `reason` varchar(128) NOT NULL, \
-										  `map` varchar(128) NOT NULL, \
-										  `length` int(11) NOT NULL, \
-										  `time_stamp_start` int(11) NOT NULL, \
-										  `time_stamp_end` int(11) NOT NULL, \
-										  `is_expired` int(11) NOT NULL, \
-										  `is_removed` int(11) NOT NULL, \
-										  `time_stamp_removed` int(20) NOT NULL, \
-										  `admin_name_removed` varchar(32) NOT NULL, \
-										  `admin_steamid_removed` varchar(20) NOT NULL, \
-										  `reason_removed` varchar(128) NOT NULL, \
-										  PRIMARY KEY(`id`))");
+	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_CurrentBans` ( \
+										`id` int(11) unsigned NOT NULL AUTO_INCREMENT, \
+										`client_name` varchar(%d) NOT NULL, \
+										`client_steamid` varchar(%d) NOT NULL, \
+										`client_ip` varchar(%d) NOT NULL, \
+										`admin_name` varchar(%d) NOT NULL, \
+										`admin_steamid` varchar(%d) NOT NULL, \
+										`reason` varchar(%d) NOT NULL, \
+										`map` varchar(%d) NOT NULL, \
+										`length` int(11) NOT NULL, \
+										`time_stamp_start` int(11) NOT NULL, \
+										`time_stamp_end` int(11) NOT NULL, \
+										`is_expired` int(11) NOT NULL, \
+										`is_removed` int(11) NOT NULL, \
+										`time_stamp_removed` int(20) NOT NULL, \
+										`admin_name_removed` varchar(%d) NOT NULL, \
+										`admin_steamid_removed` varchar(%d) NOT NULL, \
+										`reason_removed` varchar(%d) NOT NULL, \
+										PRIMARY KEY(`id`))", 
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_IP_LENGTH, // Client
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, // Admin
+										REASON_MAX_LENGTH, PLATFORM_MAX_PATH, // Reason + Map
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, REASON_MAX_LENGTH // Admin + Remove reason
+	);
  
 	T_Tables.AddQuery(query);
 
-	g_hDB.Format(query, sizeof(query),    "CREATE TABLE IF NOT EXISTS `KbRestrict_srvlogs` ( \
-										  `id` int(10) unsigned NOT NULL AUTO_INCREMENT, \
-										  `message` varchar(200) NOT NULL, \
-										  `admin_name` varchar(32) NOT NULL, \
-										  `admin_steamid` varchar(20) NOT NULL, \
-										  `client_name` varchar(32) NOT NULL, \
-										  `client_steamid` varchar(20) NOT NULL, \
-										  `time_stamp` int(20) NOT NULL, \
-										  PRIMARY KEY(`id`))");
+	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_srvlogs` ( \
+										`id` int(10) unsigned NOT NULL AUTO_INCREMENT, \
+										`message` varchar(200) NOT NULL, \
+										`admin_name` varchar(%d) NOT NULL, \
+										`admin_steamid` varchar(%d) NOT NULL, \
+										`client_name` varchar(%d) NOT NULL, \
+										`client_steamid` varchar(%d) NOT NULL, \
+										`time_stamp` int(20) NOT NULL, \
+										PRIMARY KEY(`id`))",
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH
+	);
 		  
 	T_Tables.AddQuery(query);
 
-	g_hDB.Format(query, sizeof(query),    "CREATE TABLE IF NOT EXISTS `KbRestrict_weblogs` ( \
-										  `id` int(10) unsigned NOT NULL AUTO_INCREMENT, \
-										  `message` varchar(200) NOT NULL, \
-										  `admin_name` varchar(32) NOT NULL, \
-										  `admin_steamid` varchar(20) NOT NULL, \
-										  `client_name` varchar(32) NOT NULL, \
-										  `client_steamid` varchar(20) NOT NULL, \
-										  `time_stamp` int(20) NOT NULL, \
-										  PRIMARY KEY(`id`))");
+	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_weblogs` ( \
+										`id` int(10) unsigned NOT NULL AUTO_INCREMENT, \
+										`message` varchar(200) NOT NULL, \
+										`admin_name` varchar(%d) NOT NULL, \
+										`admin_steamid` varchar(%d) NOT NULL, \
+										`client_name` varchar(%d) NOT NULL, \
+										`client_steamid` varchar(%d) NOT NULL, \
+										`time_stamp` int(20) NOT NULL, \
+										PRIMARY KEY(`id`))",
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH
+	);
 
 	T_Tables.AddQuery(query);
 
@@ -1285,61 +1248,32 @@ void Kban_RemoveBan(int target, int admin, char[] reason) {
 	g_bIsClientRestricted[target] = false;
 
 	if(!reason[0]) {
-		FormatEx(reason, 128, "Giving another chance");
+		FormatEx(reason, REASON_MAX_LENGTH, "Giving another chance");
 	}
 
-	char ip[20];
-	if(!GetClientIP(target, ip, sizeof(ip))) {
+	if(!IsIPBanned(g_sIPs[target])) {
 		return;
 	}
 
-	if(!IsIPBanned(ip)) {
+	char adminName[MAX_NAME_LENGTH], adminSteamID[MAX_AUTHID_LENGTH];
+	FormatEx(adminName, sizeof(adminName), admin < 1 ? "Console" : g_sName[admin]);
+	FormatEx(adminSteamID, sizeof(adminSteamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
+
+	char adminNameEscaped[MAX_NAME_LENGTH * 2 + 1], reasonEscaped[REASON_MAX_LENGTH * 2 + 1];
+	if(!g_hDB.Escape(adminName, adminNameEscaped, sizeof(adminNameEscaped)) || !g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
 		return;
-	}
-
-	char adminName[32];
-	if(admin < 1) {
-		adminName = "Console";	
-	} else {
-		if(!GetClientName(admin, adminName, sizeof(adminName))) {
-			return;
-		}
-	}
-
-	char adminSteamID[20];
-	if(admin < 1) {
-		adminSteamID = "Console";
-	} else {
-		if(!GetClientAuthId(admin, AuthId_Steam2, adminSteamID, sizeof(adminSteamID))) {
-			return;
-		}
-	}
-
-	char adminNameEscaped[2 * 32 + 1];
-	if(!g_hDB.Escape(adminName, adminNameEscaped, sizeof(adminNameEscaped))) {
-		return;
-	}
-
-	char reasonEscaped[2 * 128 + 1];
-	if(!g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
-		return;
-	}
-
-	char targetSteamID[20];
-	if(!GetClientAuthId(target, AuthId_Steam2, targetSteamID, sizeof(targetSteamID))) {
-		strcopy(targetSteamID, sizeof(targetSteamID), "NO STEAMID");
 	}
 
 	Kban info;
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.clientIP, ip) || (!StrEqual(targetSteamID, "NO STEAMID", false) && StrEqual(info.clientSteamID, targetSteamID))) {
+		if(strcmp(info.clientIP, g_sIPs[target], false) == 0 || (strcmp(g_sSteamIDs[target], NOSTEAMID, false) != 0 && strcmp(info.clientSteamID, g_sSteamIDs[target], false) == 0)) {
 			g_allKbans.Erase(i);
 			break;
 		}
 	}
 
-	char query[1024];
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
 										... "`admin_name_removed`='%s', `admin_steamid_removed`='%s',"
 										... "`time_stamp_removed`=%d, `reason_removed`='%s' WHERE `id`=%d",
@@ -1365,58 +1299,26 @@ void Kban_PublishKunban(int target, int admin, const char[] reason) {
 		return;
 	}
 
-	char adminName[32];
-	if(admin < 1) {
-		adminName = "Console";
-	}
-	else {
-		if(!GetClientName(admin, adminName, sizeof(adminName))) {
-			return;
-		}
-	}
+	char adminSteamID[MAX_AUTHID_LENGTH], targetName[MAX_NAME_LENGTH], adminName[MAX_NAME_LENGTH];
+	FormatEx(adminSteamID, sizeof(adminSteamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
+	FormatEx(adminName, sizeof(adminName), admin < 1 ? "Console" : g_sName[admin]);
+	FormatEx(targetName, sizeof(targetName), g_sName[target]);
 
-	char targetName[32];
-	if(!GetClientName(target, targetName, sizeof(targetName))) {
+	char targetNameEscaped[MAX_NAME_LENGTH * 2 + 1], adminNameEscaped[MAX_NAME_LENGTH * 2 + 1], reasonEscaped[REASON_MAX_LENGTH * 2 + 1];
+
+	if(!g_hDB.Escape(targetName, targetNameEscaped, sizeof(targetNameEscaped))
+		|| !g_hDB.Escape(adminName, adminNameEscaped, sizeof(adminNameEscaped))
+		|| !g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
 		return;
 	}
 
-	char targetSteamID[20];
-	if(!GetClientAuthId(target, AuthId_Steam2, targetSteamID, sizeof(targetSteamID))) {
-		strcopy(targetSteamID, sizeof(targetSteamID), "NO STEAMID");
-	}
-
-	char adminSteamID[20];
-	if(admin < 1) {
-		adminSteamID = "Console";
-	} else {
-		if(!GetClientAuthId(admin, AuthId_Steam2, adminSteamID, sizeof(adminSteamID))) {
-			return;
-		}
-	} 
-
-	char targetNameEscaped[32 * 2 + 1];
-	char adminNameEscaped[32 * 2 + 1];
-	char reasonEscaped[128 * 2 + 1];
-
-	if(!g_hDB.Escape(targetName, targetNameEscaped, sizeof(targetNameEscaped))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(adminName, adminNameEscaped, sizeof(adminNameEscaped))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
-		return;
-	}
-
-	char query[1024];
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 	"INSERT INTO `KbRestrict_srvlogs` ("
 									... "`client_name`, `client_steamid`,"
 									... "`admin_name`, `admin_steamid`,"
 									... "`message`, `time_stamp`)"
 									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
-										targetNameEscaped, targetSteamID,
+										targetNameEscaped, g_sSteamIDs[target],
 										adminName, adminSteamID,
 										"Removed Kban", GetTime());
 	g_hDB.Query(OnKbanRemove, query);
@@ -1436,85 +1338,45 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	}
 
 	if(!reason[0]) {
-		FormatEx(reason, 128, "Trying To Boost");
+		FormatEx(reason, sizeof(Kban::reason), "Trying To Boost");
 	}
 
-	if(!GetClientName(target, info.clientName, 32)) {
+	FormatEx(info.clientName, sizeof(Kban::clientName), g_sName[target]);
+	FormatEx(info.adminName, sizeof(Kban::adminName), (admin < 1) ? "Console" : g_sName[admin]);
+	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), g_sSteamIDs[target]);
+	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), (admin < 1) ? "Console" : g_sSteamIDs[admin]);
+	FormatEx(info.clientIP, sizeof(Kban::clientIP), g_sIPs[target]);
+
+	if((strcmp(info.clientSteamID, NOSTEAMID, false) != 0 && IsSteamIDBanned(info.clientSteamID)) || IsIPBanned(info.clientIP)) {
+		CReplyToCommand(admin, "%t", "AlreadyKBanned");
 		return;
 	}
 
-	if(admin < 1) {
-		FormatEx(info.adminName, 32, "Console");
-	} else {
-		if(!GetClientName(admin, info.adminName, 32)) {
-			return;
-		}
-	}
-
-	char targetSteamID[20];
-	if(!GetClientAuthId(target, AuthId_Steam2, targetSteamID, sizeof(targetSteamID))) {
-		FormatEx(info.clientSteamID, 20, "NO STEAMID");
-	} else {
-		FormatEx(info.clientSteamID, 20, targetSteamID);
-	}
-
-	if(admin < 1) {
-		FormatEx(info.adminSteamID, 20, "Console");
-	} else {
-		if(!GetClientAuthId(admin, AuthId_Steam2, info.adminSteamID, 20)) {
-			return;
-		}
-	}
-
-	if(!GetClientIP(target, info.clientIP, 20)) {
-		return;
-	}
-
-	if((!StrEqual(info.clientSteamID, "NO STEAMID") && IsSteamIDBanned(info.clientSteamID)) || IsIPBanned(info.clientIP)) {
-		return;
-	}
-
-	if(!GetCurrentMap(info.map, sizeof(Kban::map))) {
-		return;
-	}
-
+	FormatEx(info.map, sizeof(Kban::map), g_sMapName);
 	FormatEx(info.reason, sizeof(Kban::reason), reason);
-
 	info.length = length;
-
 	info.time_stamp_start = GetTime();
 
 	if(length > 0) {
-		/* Normal */
-		info.time_stamp_end = (GetTime() + (length * 60));
+		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
 	} else if(length == 0) {
-		/* Permanent */
-		info.time_stamp_end = 0;
+		info.time_stamp_end = 0; // Permanent
 	} else {
-		/* Session */
-		info.time_stamp_end = -1;
+		info.time_stamp_end = -1; // Session
 	}
 
-	int arrayIndex = g_allKbans.Length; // for editing id purpose
-	g_allKbans.PushArray(info, sizeof(info));
+	// for editing id purpose
+	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
-	char escapedTargetName[32 * 2 + 1];
-	char escapedAdminName[32 * 2 + 1];
-	char escapedReason[128 * 2 + 1];
+	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1];
 	
-	if(!g_hDB.Escape(info.clientName, escapedTargetName, sizeof(escapedTargetName))) {
-		return;
+	if(!g_hDB.Escape(info.clientName, escapedTargetName, sizeof(escapedTargetName))
+		|| !g_hDB.Escape(info.adminName, escapedAdminName, sizeof(escapedAdminName))
+		|| !g_hDB.Escape(info.reason, escapedReason, sizeof(escapedReason))) {
+			return;
 	}
 
-	if(!g_hDB.Escape(info.adminName, escapedAdminName, sizeof(escapedAdminName))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(info.reason, escapedReason, sizeof(escapedReason))) {
-		return;
-	}
-
-	char query[2000];
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
 										... "`client_name`, `client_steamid`, `client_ip`,"
 										... "`admin_name`, `admin_steamid`, `reason`,"
@@ -1530,7 +1392,10 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
 
-	g_hDB.Query(OnKbanAdded, query, arrayIndex);
+	if (g_cvSaveTempBans.IntValue < 1 && length != -1)
+		g_hDB.Query(OnKbanAdded, query, arrayIndex);
+	else if (g_cvSaveTempBans.IntValue > 0)
+		g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	g_bIsClientRestricted[target] = true;
 	g_iClientKbansNumber[target]++;
@@ -1547,32 +1412,16 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 }
 
 void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
-	char targetNameEscaped[32 * 2 + 1];
-	char adminNameEscaped[32 * 2 + 1];
-	char reasonEscaped[128 * 2 + 1];
-
-	if(!g_hDB.Escape(info.clientName, targetNameEscaped, sizeof(targetNameEscaped))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(info.adminName, adminNameEscaped, sizeof(adminNameEscaped))) {
-		return;
-	}
-
-	if(!g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
-		return;
-	}
-
-	char message[128];
+	char message[REASON_MAX_LENGTH];
 
 	switch(info.length) {
 		case 0: {
 			if(target != -1) {
 				CPrintToChatAll("%t", "RestrictedPerma", admin, target, KR_Tag, reason);
-				LogAction(admin, target, "[Kb-Restrict] \"%L\" has Kb-Restricted \"%L\" Permanently. \nReason: %s", admin, target, reason);
+				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Permanently. \nReason: %s", admin, target, reason);
 			} else {
 				CPrintToChatAll("%t", "RestrictedPermaOffline", admin, info.clientName, KR_Tag, reason);
-				LogAction(admin, -1, "[Kb-Restrict] \"%L\" has Offline Kb-Restricted \"%s\" Permanently. \nReason: %s", admin, info.clientName, reason);
+				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" Permanently. \nReason: %s", admin, info.clientName, reason);
 			}
 
 			FormatEx(message, sizeof(message), "Kban Added (Permanent)");
@@ -1581,10 +1430,10 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		case -1: {
 			if(target != -1) {
 				CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
-				LogAction(admin, target, "[Kb-Restrict] \"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
+				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
 			} else {
 				CPrintToChatAll("%t", "RestrictedTempOffline", admin, info.clientName, KR_Tag, reason);
-				LogAction(admin, -1, "[Kb-Restrict] \"%L\" has Offline Kb-Restricted \"%s\" Temporarily. \nReason: %s", admin, info.clientName, reason);
+				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" Temporarily. \nReason: %s", admin, info.clientName, reason);
 			}
 
 			FormatEx(message, sizeof(message), "Kban Added (Session)");
@@ -1593,17 +1442,28 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		default: {
 			if(target != -1) {
 				CPrintToChatAll("%t", "Restricted", admin, target, info.length, KR_Tag, reason);
-				LogAction(admin, target, "[Kb-Restrict] \"%L\" has Kb-Restricted \"%L\" for \"%d\" minutes. \nReason: %s", admin, target, info.length, reason);
+				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" for \"%d\" minutes. \nReason: %s", admin, target, info.length, reason);
 			} else {
 				CPrintToChatAll("%t", "RestrictedOffline", admin, info.clientName, info.length, KR_Tag, reason);
-				LogAction(admin, -1, "[Kb-Restrict] \"%L\" has Offline Kb-Restricted \"%s\" for %d minutes. \nReason: %s", admin, info.clientName, info.length, reason);
+				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" for %d minutes. \nReason: %s", admin, info.clientName, info.length, reason);
 			}
 
-			FormatEx(message, sizeof(message), "Kban Added (%d Minutes)", info.length);
+			FormatEx(message, sizeof(message), "Kban Added (%d Minutes - %s)", info.length, reason);
 		}
 	}
 
-	char query[1024];
+	char targetNameEscaped[MAX_NAME_LENGTH * 2 + 1], adminNameEscaped[MAX_NAME_LENGTH * 2 + 1], reasonEscaped[REASON_MAX_LENGTH * 2 + 1];
+	if(!g_hDB.Escape(info.clientName, targetNameEscaped, sizeof(targetNameEscaped))
+		|| !g_hDB.Escape(info.adminName, adminNameEscaped, sizeof(adminNameEscaped))
+		|| !g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))) {
+			LogError("[Kb-Restrict] Couldn't escape the message.");
+			return;
+	}
+
+	// -1 because the index was increase due to PushArray.
+	int arrayIndex = (g_allKbans.Length - 1);
+
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 	"INSERT INTO `KbRestrict_srvlogs` ("
 									... "`client_name`, `client_steamid`,"
 									... "`admin_name`, `admin_steamid`,"
@@ -1613,7 +1473,17 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 										adminNameEscaped, info.adminSteamID,
 										message, GetTime());
 
-	g_hDB.Query(OnKbanAdded, query);
+	g_hDB.Query(OnKbanPublished, query, arrayIndex);
+}
+
+void OnKbanPublished(Database db, DBResultSet results, const char[] error, int arrayIndex) {
+	if (arrayIndex < 0 || arrayIndex >= g_allKbans.Length) {
+		LogError("Invalid arrayIndex %d. g_allKbans has length %d.", arrayIndex, g_allKbans.Length);
+	}
+
+	if(results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_INSERT, error);
+	}
 }
 
 void OnKbanAdded(Database db, DBResultSet results, const char[] error, int arrayIndex) {
@@ -1623,9 +1493,13 @@ void OnKbanAdded(Database db, DBResultSet results, const char[] error, int array
 	}
 
 	Kban info;
-	g_allKbans.GetArray(arrayIndex, info, sizeof(info));
-	
-	char query[1024];
+	// g_allKbans.GetArray(arrayIndex, info, sizeof(info));
+	if (!g_allKbans.GetArray(arrayIndex, info, sizeof(info))) {
+        LogError("Failed to retrieve element at index %d from g_allKbans.", arrayIndex);
+        return;
+    }
+
+	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"SELECT `id` FROM `KbRestrict_CurrentBans` WHERE"
 										... "`client_steamid`='%s' AND `client_ip`='%s' AND `is_expired`=0 AND `is_removed`=0",
 										info.clientSteamID, info.clientIP);
@@ -1634,56 +1508,29 @@ void OnKbanAdded(Database db, DBResultSet results, const char[] error, int array
 }
 
 int Kban_CheckKbanAdminAccess(int client, int time) {
+	bool hasRootFlag	= (CheckCommandAccess(client, "sm_root", ADMFLAG_ROOT, true));
+	if(hasRootFlag)
+		return 0;
+
 	bool hasKickFlag 	= (CheckCommandAccess(client, "sm_kick", ADMFLAG_KICK, true));
 	bool hasBanFlag 	= (CheckCommandAccess(client, "sm_ban", ADMFLAG_BAN, true));
 	bool hasRconFlag 	= (CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true));
 
 	ConVar cvar;
-	if(hasKickFlag && !hasBanFlag && !hasRconFlag) {
+	if(hasKickFlag && !hasBanFlag && !hasRconFlag)
 		cvar = g_cvMaxBanTimeKickFlag;
-	} else if(hasBanFlag && !hasRconFlag) {
+	else if(hasBanFlag && !hasRconFlag)
 		cvar = g_cvMaxBanTimeBanFlag;
-	} else if(hasRconFlag) {
+	else if(hasRconFlag)
 		cvar = g_cvMaxBanTimeRconFlag;
-	}
 
-	if(cvar == null) {
-		// this should never happen
+	if(cvar == null) // Should never happen
 		return g_cvDefaultLength.IntValue;
-	}
 
-	if(time > cvar.IntValue) {
+	if(time == -1 || time > cvar.IntValue)
 		time = cvar.IntValue;
-	}
 
 	return time;
-}
-
-bool Kban_CheckKbanMaxLength(int client, int time) {
-	bool hasRootFlag	= (CheckCommandAccess(client, "sm_root", ADMFLAG_ROOT, true));
-
-	if(hasRootFlag) {
-		return true;
-	}
-
-	bool hasKickFlag 	= (CheckCommandAccess(client, "sm_kick", ADMFLAG_KICK, true));
-	bool hasBanFlag 	= (CheckCommandAccess(client, "sm_ban", ADMFLAG_BAN, true));
-	bool hasRconFlag 	= (CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true));
-
-	ConVar cvar;
-	if(hasKickFlag && !hasBanFlag && !hasRconFlag) {
-		cvar = g_cvMaxBanTimeKickFlag;
-	} else if(hasBanFlag && !hasRconFlag) {
-		cvar = g_cvMaxBanTimeBanFlag;
-	} else if(hasRconFlag) {
-		cvar = g_cvMaxBanTimeRconFlag;
-	}
-
-	if(time > cvar.IntValue) {
-		return false;
-	}
-
-	return true;
 }
 
 void OnGetKbanID(Database db, DBResultSet results, const char[] error, int arrayIndex) {
@@ -1712,12 +1559,12 @@ bool Kban_GetKban(KbanGetType type, Kban info, int id = -1, const char[] steamID
 				return true;
 			}
 		} else if(type == KBAN_GET_TYPE_STEAMID) {
-			if(steamID[0] && StrEqual(steamID, exInfo.clientSteamID)) {
+			if(steamID[0] && (strcmp(steamID, exInfo.clientSteamID, false) == 0)) {
 				CloneKban(info, exInfo);
 				return true;
 			}
 		} else {
-			if(ip[0] && StrEqual(ip, exInfo.clientIP)) {
+			if(ip[0] && (strcmp(ip, exInfo.clientIP, false) == 0)) {
 				CloneKban(info, exInfo);
 				return true;
 			}
@@ -1728,11 +1575,11 @@ bool Kban_GetKban(KbanGetType type, Kban info, int id = -1, const char[] steamID
 }
 
 void CloneKban(Kban info, Kban exInfo) {
-	FormatEx(info.clientName, 32, exInfo.clientName);
-	FormatEx(info.clientSteamID, 20, exInfo.clientSteamID);
-	FormatEx(info.clientIP, 20, exInfo.clientIP);
-	FormatEx(info.adminName, 32, exInfo.adminName);
-	FormatEx(info.adminSteamID, 20, exInfo.adminSteamID);
+	FormatEx(info.clientName, sizeof(Kban::clientName), exInfo.clientName);
+	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), exInfo.clientSteamID);
+	FormatEx(info.clientIP, sizeof(Kban::clientIP), exInfo.clientIP);
+	FormatEx(info.adminName, sizeof(Kban::adminName), exInfo.adminName);
+	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), exInfo.adminSteamID);
 	FormatEx(info.map, sizeof(Kban::map), exInfo.map);
 	FormatEx(info.reason, sizeof(Kban::reason), exInfo.reason);
 
@@ -1744,16 +1591,11 @@ void CloneKban(Kban info, Kban exInfo) {
 
 int Kban_GetClientByIP(const char[] sIP) {
 	for(int i = 1; i <= MaxClients; i++) {
-		if(!IsClientInGame(i)) {
+		if(!IsClientInGame(i) || IsFakeClient(i) || IsClientSourceTV(i)) {
 			continue;
 		}
 
-		char ip[20];
-		if(!GetClientIP(i, ip, 20)) {
-			continue;
-		}
-
-		if(StrEqual(ip, sIP, false)) {
+		if(strcmp(g_sIPs[i], sIP, false) == 0) {
 			return i;
 		}
 	}
@@ -1763,28 +1605,27 @@ int Kban_GetClientByIP(const char[] sIP) {
 
 int Kban_GetClientBySteamID(const char[] sSteamID) {
 	for(int i = 1; i <= MaxClients; i++) {
-		if(!IsClientInGame(i)) {
+		if(!IsClientInGame(i) || IsFakeClient(i) || IsClientSourceTV(i)) {
 			continue;
 		}
 
-		char steamID[20];
-		if(!GetClientAuthId(i, AuthId_Steam2, steamID, 20)) {
-			continue;
-		}
-
-		if(StrEqual(steamID, sSteamID)) {
+		if(strcmp(g_sSteamIDs[i], sSteamID, false) == 0) {
 			return i;
 		}
 	}
-	
+
 	return -1;
 }
 
 bool IsIPBanned(const char[] ip) {
+	if(g_allKbans == null) {
+		return false;
+	}
+
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.clientIP, ip)) {
+		if(strcmp(info.clientIP, ip, false) == 0) {
 			return true;
 		}
 	}
@@ -1793,10 +1634,14 @@ bool IsIPBanned(const char[] ip) {
 }
 
 bool IsSteamIDBanned(const char[] steamID) {
+	if(g_allKbans == null) {
+		return false;
+	}
+
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.clientSteamID, steamID)) {
+		if(strcmp(info.clientSteamID, steamID, false) == 0) {
 			return true;
 		}
 	}
@@ -1806,11 +1651,11 @@ bool IsSteamIDBanned(const char[] steamID) {
 
 KbanType Kban_GetClientKbanType(int client, char[] steamID = "", char[] ip = "") {
 	if(client != -1) {
-		if(GetClientAuthId(client, AuthId_Steam2, steamID, 20) && IsSteamIDBanned(steamID)) {
+		if(IsSteamIDBanned(g_sSteamIDs[client])) {
 			return KBAN_TYPE_STEAMID;
 		}
 
-		if(GetClientIP(client, ip, 20) && IsIPBanned(ip)) {
+		if(IsIPBanned(g_sIPs[client])) {
 			return KBAN_TYPE_IP;
 		}
 	} else {
