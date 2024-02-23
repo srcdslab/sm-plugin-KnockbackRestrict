@@ -103,7 +103,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.0",
+	version 	= "3.4.1",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -292,7 +292,7 @@ public void OnClientPostAdminCheck(int client) {
 		if(strcmp(info.clientIP, g_sIPs[client], false) == 0) {
 			if(strcmp(info.clientSteamID, NOSTEAMID, false) == 0) {
 
-				FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), g_sSteamIDs[client]);
+				FormatEx(info.clientSteamID, sizeof(info.clientSteamID), g_sSteamIDs[client]);
 				g_allKbans.SetArray(i, info, sizeof(info));
 
 				char query[MAX_QUERIE_LENGTH];
@@ -342,12 +342,12 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", g_sIPs[client], tempInfo.id);
 				g_hDB.Query(OnUpdateClientIP, query);
 
-				FormatEx(tempInfo.clientIP, sizeof(Kban::clientIP), "%s", g_sIPs[client]);
+				FormatEx(tempInfo.clientIP, sizeof(tempInfo.clientIP), "%s", g_sIPs[client]);
 				for(int i = 0; i < g_allKbans.Length; i++) {
 					Kban exInfo;
 					g_allKbans.GetArray(i, exInfo, sizeof(exInfo));
 					if(exInfo.id == tempInfo.id) {
-						FormatEx(exInfo.clientIP, sizeof(Kban::clientIP), "%s", tempInfo.clientIP);
+						FormatEx(exInfo.clientIP, sizeof(exInfo.clientIP), "%s", tempInfo.clientIP);
 						g_allKbans.SetArray(i, exInfo, sizeof(exInfo));
 						break;
 					}
@@ -448,7 +448,7 @@ void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int 
 public Action Event_OnPlayerName(Handle event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(GetEventInt(event, "userid"));
-	if (client > 0 && IsClientInGame(client) && !IsFakeClient(client) && !IsClientSourceTV(client))
+	if (client <= MaxClients && client > 0 && IsClientInGame(client) && !IsFakeClient(client) && !IsClientSourceTV(client))
 		GetEventString(event, "newname", g_sName[client], sizeof(g_sName[]));
 	return Plugin_Continue;
 }
@@ -481,9 +481,9 @@ public void OnClientDisconnect(int client) {
 
 	OfflinePlayer player;
 	player.userid = GetClientUserId(client);
-	FormatEx(player.steamID, sizeof(OfflinePlayer::steamID), g_sSteamIDs[client]);
-	FormatEx(player.ip, sizeof(OfflinePlayer::ip), g_sIPs[client]);
-	FormatEx(player.name, sizeof(OfflinePlayer::name), g_sName[client]);
+	FormatEx(player.steamID, sizeof(player.steamID), g_sSteamIDs[client]);
+	FormatEx(player.ip, sizeof(player.ip), g_sIPs[client]);
+	FormatEx(player.name, sizeof(player.name), g_sName[client]);
 
 	g_OfflinePlayers.PushArray(player, sizeof(player));
 
@@ -877,20 +877,20 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 	}
 
 	if(!reason[0]) {
-		FormatEx(reason, sizeof(Kban::reason), "Trying To Boost");
+		FormatEx(reason, REASON_MAX_LENGTH, "Trying To Boost");
 	}
 
 	char steamID[MAX_AUTHID_LENGTH], adminName[MAX_NAME_LENGTH];
 	FormatEx(steamID, sizeof(steamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
 	FormatEx(adminName, sizeof(adminName), admin < 1 ? "Console" : g_sName[admin]);
 
-	FormatEx(info.clientName, sizeof(Kban::clientName), player.name);
-	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), player.steamID);
-	FormatEx(info.clientIP, sizeof(Kban::clientIP), player.ip);
-	FormatEx(info.adminName, sizeof(Kban::adminName), adminName);
-	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), steamID);
-	FormatEx(info.reason, sizeof(Kban::reason), reason);
-	FormatEx(info.map, sizeof(Kban::map), g_sMapName);
+	FormatEx(info.clientName, sizeof(info.clientName), player.name);
+	FormatEx(info.clientSteamID, sizeof(info.clientSteamID), player.steamID);
+	FormatEx(info.clientIP, sizeof(info.clientIP), player.ip);
+	FormatEx(info.adminName, sizeof(info.adminName), adminName);
+	FormatEx(info.adminSteamID, sizeof(info.adminSteamID), steamID);
+	FormatEx(info.reason, sizeof(info.reason), reason);
+	FormatEx(info.map, sizeof(info.map), g_sMapName);
 
 	info.length = length;
 	info.time_stamp_start = GetTime();
@@ -1086,31 +1086,31 @@ void Kban_GetRowResults(int num, DBResultSet results, Kban info) {
 		}
 
 		case 1: {
-			results.FetchString(num, info.clientName, sizeof(Kban::clientName));
+			results.FetchString(num, info.clientName, sizeof(info.clientName));
 		}
 
 		case 2: {
-			results.FetchString(num, info.clientSteamID, sizeof(Kban::clientSteamID));
+			results.FetchString(num, info.clientSteamID, sizeof(info.clientSteamID));
 		}
 
 		case 3: {
-			results.FetchString(num, info.clientIP, sizeof(Kban::clientIP));
+			results.FetchString(num, info.clientIP, sizeof(info.clientIP));
 		}
 
 		case 4: {
-			results.FetchString(num, info.adminName, sizeof(Kban::adminName));
+			results.FetchString(num, info.adminName, sizeof(info.adminName));
 		}
 
 		case 5: {
-			results.FetchString(num, info.adminSteamID, sizeof(Kban::adminSteamID));
+			results.FetchString(num, info.adminSteamID, sizeof(info.adminSteamID));
 		}
 
 		case 6: {
-			results.FetchString(num, info.reason, sizeof(Kban::reason));
+			results.FetchString(num, info.reason, sizeof(info.reason));
 		}
 
 		case 7: {
-			results.FetchString(num, info.map, sizeof(Kban::map));
+			results.FetchString(num, info.map, sizeof(info.map));
 		}
 
 		case 8: {
@@ -1338,22 +1338,22 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	}
 
 	if(!reason[0]) {
-		FormatEx(reason, sizeof(Kban::reason), "Trying To Boost");
+		FormatEx(reason, REASON_MAX_LENGTH, "Trying To Boost");
 	}
 
-	FormatEx(info.clientName, sizeof(Kban::clientName), g_sName[target]);
-	FormatEx(info.adminName, sizeof(Kban::adminName), (admin < 1) ? "Console" : g_sName[admin]);
-	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), g_sSteamIDs[target]);
-	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), (admin < 1) ? "Console" : g_sSteamIDs[admin]);
-	FormatEx(info.clientIP, sizeof(Kban::clientIP), g_sIPs[target]);
+	FormatEx(info.clientName, sizeof(info.clientName), g_sName[target]);
+	FormatEx(info.adminName, sizeof(info.adminName), (admin < 1) ? "Console" : g_sName[admin]);
+	FormatEx(info.clientSteamID, sizeof(info.clientSteamID), g_sSteamIDs[target]);
+	FormatEx(info.adminSteamID, sizeof(info.adminSteamID), (admin < 1) ? "Console" : g_sSteamIDs[admin]);
+	FormatEx(info.clientIP, sizeof(info.clientIP), g_sIPs[target]);
 
 	if((strcmp(info.clientSteamID, NOSTEAMID, false) != 0 && IsSteamIDBanned(info.clientSteamID)) || IsIPBanned(info.clientIP)) {
 		CReplyToCommand(admin, "%t", "AlreadyKBanned");
 		return;
 	}
 
-	FormatEx(info.map, sizeof(Kban::map), g_sMapName);
-	FormatEx(info.reason, sizeof(Kban::reason), reason);
+	FormatEx(info.map, sizeof(info.map), g_sMapName);
+	FormatEx(info.reason, sizeof(info.reason), reason);
 	info.length = length;
 	info.time_stamp_start = GetTime();
 
@@ -1527,7 +1527,7 @@ int Kban_CheckKbanAdminAccess(int client, int time) {
 	if(cvar == null) // Should never happen
 		return g_cvDefaultLength.IntValue;
 
-	if(time == -1 || time > cvar.IntValue)
+	if(time < 0 || time > cvar.IntValue)
 		time = cvar.IntValue;
 
 	return time;
@@ -1575,13 +1575,13 @@ bool Kban_GetKban(KbanGetType type, Kban info, int id = -1, const char[] steamID
 }
 
 void CloneKban(Kban info, Kban exInfo) {
-	FormatEx(info.clientName, sizeof(Kban::clientName), exInfo.clientName);
-	FormatEx(info.clientSteamID, sizeof(Kban::clientSteamID), exInfo.clientSteamID);
-	FormatEx(info.clientIP, sizeof(Kban::clientIP), exInfo.clientIP);
-	FormatEx(info.adminName, sizeof(Kban::adminName), exInfo.adminName);
-	FormatEx(info.adminSteamID, sizeof(Kban::adminSteamID), exInfo.adminSteamID);
-	FormatEx(info.map, sizeof(Kban::map), exInfo.map);
-	FormatEx(info.reason, sizeof(Kban::reason), exInfo.reason);
+	FormatEx(info.clientName, sizeof(info.clientName), exInfo.clientName);
+	FormatEx(info.clientSteamID, sizeof(info.clientSteamID), exInfo.clientSteamID);
+	FormatEx(info.clientIP, sizeof(info.clientIP), exInfo.clientIP);
+	FormatEx(info.adminName, sizeof(info.adminName), exInfo.adminName);
+	FormatEx(info.adminSteamID, sizeof(info.adminSteamID), exInfo.adminSteamID);
+	FormatEx(info.map, sizeof(info.map), exInfo.map);
+	FormatEx(info.reason, sizeof(info.reason), exInfo.reason);
 
 	info.length = exInfo.length;
 	info.time_stamp_start = exInfo.time_stamp_start;
