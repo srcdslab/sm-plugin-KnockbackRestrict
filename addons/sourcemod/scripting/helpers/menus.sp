@@ -2,8 +2,7 @@
 #pragma newdecls required
 
 /* Admin Menu */
-public void OnAdminMenuReady(Handle aTopMenu)
-{
+public void OnAdminMenuReady(Handle aTopMenu) {
 	TopMenu topmenu = TopMenu.FromHandle(aTopMenu);
 	
 	if(g_hAdminMenu == topmenu)
@@ -11,122 +10,80 @@ public void OnAdminMenuReady(Handle aTopMenu)
 	
 	g_hAdminMenu = topmenu;
 	
-	TopMenuObject hMenuObj = g_hAdminMenu.AddCategory("KbRestrictCommands", CategoryHandler, "sm_koban", ADMFLAG_BAN);
+	TopMenuObject hMenuObj = g_hAdminMenu.AddCategory("KbRestrictCommands", CategoryHandler, "sm_koban", ADMFLAG_KICK);
 
 	if(hMenuObj == INVALID_TOPMENUOBJECT)
 		return;
 		
-	g_hAdminMenu.AddItem("KbRestrict_RestrictPlayer", ItemHandler_RestrictPlayer, hMenuObj, "sm_koban", ADMFLAG_BAN);
-	g_hAdminMenu.AddItem("KbRestrict_ListOfKbans", ItemHandler_ListOfKbans, hMenuObj, "sm_koban", ADMFLAG_RCON);
-	g_hAdminMenu.AddItem("KbRestrict_OnlineKBanned", ItemHandler_OnlineKBanned, hMenuObj, "sm_koban", ADMFLAG_BAN);
-	g_hAdminMenu.AddItem("KbRestrict_OwnBans", ItemHandler_OwnBans, hMenuObj, "sm_koban", ADMFLAG_BAN);
+	g_hAdminMenu.AddItem("KbRestrict_RestrictPlayer", ItemHandler_RestrictPlayer, hMenuObj, "sm_kban", ADMFLAG_KICK);
+	g_hAdminMenu.AddItem("KbRestrict_ListOfKbans", ItemHandler_ListOfKbans, hMenuObj, "sm_kbanlist", ADMFLAG_RCON);
+	g_hAdminMenu.AddItem("KbRestrict_OnlineKBanned", ItemHandler_OnlineKBanned, hMenuObj, "sm_kban", ADMFLAG_KICK);
+	g_hAdminMenu.AddItem("KbRestrict_OwnBans", ItemHandler_OwnBans, hMenuObj, "sm_kban", ADMFLAG_KICK);
+	g_hAdminMenu.AddItem("KbRestrict_OfflineKban", ItemHandler_OfflineKban, hMenuObj, "sm_koban", ADMFLAG_BAN);
 }
 
 //----------------------------------------------------------------------------------------------------
 // Purpose:
 //----------------------------------------------------------------------------------------------------
-public void CategoryHandler(TopMenu topmenu, 
-      TopMenuAction action,
-      TopMenuObject object_id,
-      int param,
-      char[] buffer,
-      int maxlength)
-{
+public void CategoryHandler(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
 	if(action == TopMenuAction_DisplayTitle)
-	{
-		strcopy(buffer, maxlength, "KbRestrict Commands Main Menu");
-	}
+		FormatEx(buffer, maxlength, "[KbRestrict] %t", "Commands");
 	else if(action == TopMenuAction_DisplayOption)
-	{
-		strcopy(buffer, maxlength, "KbRestrict Commands");
-	}
+		FormatEx(buffer, maxlength, "KbRestrict %t", "Commands");
 }
 
 //----------------------------------------------------------------------------------------------------
 // Purpose:
 //----------------------------------------------------------------------------------------------------
-public void ItemHandler_RestrictPlayer(TopMenu topmenu, 
-      TopMenuAction action,
-      TopMenuObject object_id,
-      int param,
-      char[] buffer,
-      int maxlength)
-{
-	if(action == TopMenuAction_DisplayOption)
-	{
-		strcopy(buffer, maxlength, "KBan a Player");
-	}
+public void ItemHandler_RestrictPlayer(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
+	if(action == TopMenuAction_DisplayOption) 
+		FormatEx(buffer, maxlength, "%t", "KBan a player");
 	else if(action == TopMenuAction_SelectOption)
-	{
 		Kban_OpenKbanMenu(param);
-	}
 }
 
 //----------------------------------------------------------------------------------------------------
 // Purpose:
 //----------------------------------------------------------------------------------------------------
-public void ItemHandler_ListOfKbans(TopMenu topmenu, 
-      TopMenuAction action,
-      TopMenuObject object_id,
-      int param,
-      char[] buffer,
-      int maxlength)
-{
+public void ItemHandler_ListOfKbans(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
 	if(action == TopMenuAction_DisplayOption)
-	{
-		strcopy(buffer, maxlength, "List of KBans");
-	}
-	else if(action == TopMenuAction_SelectOption)
-	{
+		FormatEx(buffer, maxlength, "%t", "List of KBans");
+	else if(action == TopMenuAction_SelectOption) {
 		if(CheckCommandAccess(param, "sm_koban", ADMFLAG_RCON, true))
-		{
 			Kban_OpenAllKbansMenu(param);
-		}
 		else
-		{
-			CPrintToChat(param, "%s You don't have access to view the KBan List.", KR_Tag);
-		}
+			CPrintToChat(param, "%t", "Not have permission KbList");
 	}
 }
 
 //----------------------------------------------------------------------------------------------------
 // Purpose:
 //----------------------------------------------------------------------------------------------------
-public void ItemHandler_OnlineKBanned(TopMenu topmenu, 
-      TopMenuAction action,
-      TopMenuObject object_id,
-      int param,
-      char[] buffer,
-      int maxlength)
-{
+public void ItemHandler_OnlineKBanned(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
 	if(action == TopMenuAction_DisplayOption)
-	{
-		strcopy(buffer, maxlength, "Online KBanned");
-	}
+		FormatEx(buffer, maxlength, "%t", "Online KBanned");
 	else if(action == TopMenuAction_SelectOption)
-	{
 		Kban_OpenOnlineKbansMenu(param);
-	}
 }
 
 //----------------------------------------------------------------------------------------------------
 // Purpose:
 //----------------------------------------------------------------------------------------------------
-public void ItemHandler_OwnBans(TopMenu topmenu, 
-      TopMenuAction action,
-      TopMenuObject object_id,
-      int param,
-      char[] buffer,
-      int maxlength)
-{
+public void ItemHandler_OwnBans(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
 	if(action == TopMenuAction_DisplayOption)
-	{
-		strcopy(buffer, maxlength, "Your Own List of KBans");
-	}
+		FormatEx(buffer, maxlength, "%t", "Own KbList");
 	else if(action == TopMenuAction_SelectOption)
-	{
 		Kban_OpenOwnKbansMenu(param);
-	}
+}
+
+//----------------------------------------------------------------------------------------------------
+// Purpose:
+//----------------------------------------------------------------------------------------------------
+public void ItemHandler_OfflineKban(TopMenu topmenu, TopMenuAction action, TopMenuObject object_id, int param, char[] buffer, int maxlength) {
+	if(action == TopMenuAction_DisplayOption)
+		FormatEx(buffer, maxlength, "%t", "Offline Kban");
+	else if(action == TopMenuAction_SelectOption)
+		Kban_OpenOfflineKbanMenu(param);
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -135,38 +92,45 @@ public void ItemHandler_OwnBans(TopMenu topmenu,
 void Kban_OpenMainMenu(int client) {
 	Menu menu = new Menu(Menu_MainMenu);
 	menu.SetTitle("[Kb-Restrict] Kban Main Menu");
-	
-	menu.AddItem("0", "Kban a Player");
-	menu.AddItem("1", "List of Kbans", CheckCommandAccess(client, "sm_koban", ADMFLAG_RCON, true) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
-	menu.AddItem("2", "Online KBanned");
-	menu.AddItem("3", "Your Own List of Kbans");
-	
+
+	char sBuffer[128];
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "KBan a player");
+	menu.AddItem("0", sBuffer);
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "List of KBans");
+	menu.AddItem("1", sBuffer, CheckCommandAccess(client, "sm_koban", ADMFLAG_RCON, true) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Online KBanned");
+	menu.AddItem("2", sBuffer);
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Own KbList");
+	menu.AddItem("3", sBuffer);
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Offline Kban");
+	menu.AddItem("4", sBuffer);
+
 	menu.ExitButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 void Kban_OpenKbanMenu(int client) {
 	Menu menu = new Menu(Menu_KbanMenu);
-	menu.SetTitle("[Kb-Restrict] Restrict a Player");
-	
+	menu.SetTitle("[Kb-Restrict] %t", "Restrict a Player");
+
 	for(int i = 1; i <= MaxClients; i++) {
-		if(!IsClientInGame(i)) {
+		if(!IsClientInGame(i) || IsFakeClient(i) || IsClientSourceTV(i) || g_bIsClientRestricted[i])
 			continue;
-		}
-		
-		if(g_bIsClientRestricted[i]) {
-			continue;
-		}
-		
-		char userid[10];
+
+		char sBuffer[128], userid[10];
 		IntToString(GetClientUserId(i), userid, sizeof(userid));
-		
-		char name[32];
-		if(!GetClientName(i, name, sizeof(name))) {
-			continue;
-		}
-		
-		menu.AddItem(userid, name);
+		FormatEx(sBuffer, sizeof(sBuffer), "%s |#%d", g_sName[i], i);
+		menu.AddItem(userid, sBuffer);
+	}
+
+	if(menu.ItemCount == 0) {
+		char sBuffer[128];
+		FormatEx(sBuffer, sizeof(sBuffer), "%t", "No players to restrict");
+		menu.AddItem("a", sBuffer, ITEMDRAW_DISABLED);
 	}
 	
 	menu.ExitBackButton = true;
@@ -175,7 +139,7 @@ void Kban_OpenKbanMenu(int client) {
 
 void Kban_OpenAllKbansMenu(int client) {
 	Menu menu = new Menu(Menu_AllKbansMenu);
-	menu.SetTitle("[Kb-Restrict] All Active KBans");
+	menu.SetTitle("[Kb-Restrict] %t", "All Active KBans");
 	
 	bool found = false;
 	for(int i = 0; i < g_allKbans.Length; i++) {
@@ -184,46 +148,44 @@ void Kban_OpenAllKbansMenu(int client) {
 		
 		char menuItem[10];
 		IntToString(info.id, menuItem, sizeof(menuItem));
-		
-		char menuBuffer[70];
-		
+
 		KbanType type = Kban_GetClientKbanType(-1, info.clientSteamID, info.clientIP);
+
 		int target = -1;
-		if(type == KBAN_TYPE_IP) {
+		if(type == KBAN_TYPE_IP)
 			target = Kban_GetClientByIP(info.clientIP);
-		} else {
+		else
 			target = Kban_GetClientBySteamID(info.clientSteamID);
-		}
-		
-		char clientStatus[8];
-		clientStatus = (target == -1) ? "Offline" : "Online";
-		
+
+		char clientStatus[32];
+		FormatEx(clientStatus, sizeof(clientStatus), "%t", (target == -1) ? "Offline" : "Online");
+
 		char clientName[70];
-		if(target != -1) {
-			char clientNameEx[32];
-			GetClientName(target, clientNameEx, sizeof(clientNameEx));
-			FormatEx(clientName, sizeof(clientName), "%s(%s)", clientNameEx, info.clientName);
-		} else {
+		if(target != -1)
+			FormatEx(clientName, sizeof(clientName), "%s(%s)", g_sName[target], info.clientName);
+		else
 			FormatEx(clientName, sizeof(clientName), "%s", info.clientName);
-		}
-		
+
+		char menuBuffer[70];
 		FormatEx(menuBuffer, sizeof(menuBuffer), "%s [%s][%s]", clientName, info.clientSteamID, clientStatus);
-		
+
 		menu.AddItem(menuItem, menuBuffer);
 		found = true;
 	}
 	
 	if(!found) {
-		menu.AddItem("a", "No KBan Found!", ITEMDRAW_DISABLED);
+		char sBuffer[64];
+		FormatEx(sBuffer, sizeof(sBuffer), "%t", "No KBan Found");
+		menu.AddItem("a", sBuffer, ITEMDRAW_DISABLED);
 	}
-	
+
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
 void Kban_OpenOnlineKbansMenu(int client) {
 	Menu menu = new Menu(Menu_OnlineKbansMenu);
-	menu.SetTitle("[Kb-Restrict] Online KBans");
+	menu.SetTitle("[Kb-Restrict] %t", "Online KBanned");
 	
 	bool found = false;
 	for(int i = 0; i < g_allKbans.Length; i++) {
@@ -233,31 +195,29 @@ void Kban_OpenOnlineKbansMenu(int client) {
 		KbanType type = Kban_GetClientKbanType(-1, info.clientSteamID, info.clientIP);
 		
 		int target = -1;
-		if(type == KBAN_TYPE_IP) {
+		if(type == KBAN_TYPE_IP)
 			target = Kban_GetClientByIP(info.clientIP);
-		} else {
+		else
 			target = Kban_GetClientBySteamID(info.clientSteamID);
-		}
 
 		if(target != -1) {
 			char menuItem[10];
 			IntToString(info.id, menuItem, sizeof(menuItem));
 			
-			char clientName[32];
-			GetClientName(target, clientName, sizeof(clientName));
-			
 			char clientNameEx[35];
 			FormatEx(clientNameEx, sizeof(clientNameEx), "(%s)", info.clientName);
-			
+
 			char menuBuffer[55];
-			FormatEx(menuBuffer, sizeof(menuBuffer), "%s%s [%s]", clientName, (StrEqual(clientName, info.clientName)) ? "" : clientNameEx, info.clientSteamID);
+			FormatEx(menuBuffer, sizeof(menuBuffer), "%s%s [%s]", g_sName[target], (strcmp(g_sName[target], info.clientName, false) == 0) ? "" : clientNameEx, info.clientSteamID);
 			menu.AddItem(menuItem, menuBuffer);
 			found = true;
 		}
 	}
 	
 	if(!found) {
-		menu.AddItem("a", "No KBan Found!", ITEMDRAW_DISABLED);
+		char sBuffer[64];
+		FormatEx(sBuffer, sizeof(sBuffer), "%t", "No KBan Found");
+		menu.AddItem("a", sBuffer, ITEMDRAW_DISABLED);
 	}
 	
 	menu.ExitBackButton = true;
@@ -266,53 +226,47 @@ void Kban_OpenOnlineKbansMenu(int client) {
 
 void Kban_OpenOwnKbansMenu(int client) {
 	Menu menu = new Menu(Menu_OwnKbansMenu);
-	menu.SetTitle("[Kb-Restrict] Own KBans");
-	
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
+	menu.SetTitle("[Kb-Restrict] %t", "Own KbList");
 	
 	bool found = false;
 	
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
-		if(StrEqual(info.adminSteamID, steamID)) {
+		if(strcmp(info.adminSteamID, g_sSteamIDs[client], false) == 0) {
 			char menuItem[10];
 			IntToString(info.id, menuItem, sizeof(menuItem));
-			
-			char menuBuffer[70];
-			
+
 			KbanType type = Kban_GetClientKbanType(-1, info.clientSteamID, info.clientIP);
 			int target = -1;
-			if(type == KBAN_TYPE_IP) {
+			if(type == KBAN_TYPE_IP)
 				target = Kban_GetClientByIP(info.clientIP);
-			} else {
+			else
 				target = Kban_GetClientBySteamID(info.clientSteamID);
-			}
-			
-			char clientStatus[8];
-			clientStatus = (target == -1) ? "Offline" : "Online";
-			
-			char clientName[70];
+
+			char clientStatus[8], clientName[70];
 			if(target != -1) {
-				char clientNameEx[32];
-				GetClientName(target, clientNameEx, sizeof(clientNameEx));
-				FormatEx(clientName, sizeof(clientName), "%s(%s)", clientNameEx, info.clientName);
+				char clientNameEx[35];
+				FormatEx(clientNameEx, sizeof(clientNameEx), "(%s)", info.clientName);
+				FormatEx(clientStatus, sizeof(clientStatus), "%t", "Online");
+				FormatEx(clientName, sizeof(clientName), "%s%s", g_sName[target], strcmp(g_sName[target], info.clientName, false) == 0 ? "" : clientNameEx);
 			} else {
+				FormatEx(clientStatus, sizeof(clientStatus), "%t", "Offline");
 				FormatEx(clientName, sizeof(clientName), "%s", info.clientName);
 			}
-			
+
+			char menuBuffer[70];
 			FormatEx(menuBuffer, sizeof(menuBuffer), "%s [%s][%s]", clientName, info.clientSteamID, clientStatus);
-			
+
 			menu.AddItem(menuItem, menuBuffer);
 			found = true;
 		}
 	}
 	
 	if(!found) {
-		menu.AddItem("a", "No KBan Found!", ITEMDRAW_DISABLED);
+		char sBuffer[64];
+		FormatEx(sBuffer, sizeof(sBuffer), "%t", "No KBan Found");
+		menu.AddItem("a", sBuffer, ITEMDRAW_DISABLED);
 	}
 	
 	menu.ExitBackButton = true;
@@ -341,6 +295,10 @@ int Menu_MainMenu(Menu menu, MenuAction action, int param1, int param2) {
 				
 				case 3: {
 					Kban_OpenOwnKbansMenu(param1);
+				}
+
+				case 4: {
+					Kban_OpenOfflineKbanMenu(param1);
 				}
 			}
 		}
@@ -453,48 +411,40 @@ void Kban_OpenKbanInfoMenu(int client, int id) {
 		return;
 	}
 	
-	char steamID[20];
-	if(!GetClientAuthId(client, AuthId_Steam2, steamID, sizeof(steamID))) {
-		return;
-	}
+	menu.SetTitle("[Kb-Restrict] %t", "Infos and Actions", info.clientName);
 	
-	menu.SetTitle("[Kb-Restrict] Kban Info and Actions for %s[%s]", info.clientName, info.clientSteamID);
-	
-	char dateStart[128];
-	char dateEnd[128];
-	char duration[20];
-	
+	char dateStart[128], dateEnd[128], duration[20];
 	FormatTime(dateStart, sizeof(dateStart), "%d %B %G @ %r", info.time_stamp_start);
 	if(info.length == 0) {
-		duration = "Permanent";
-		dateEnd = "Never"; 
+		FormatEx(duration, sizeof(duration), "%t", "Permanent");
+		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Never");
 	} else if(info.length == -1) {
-		duration = "Session";
-		dateEnd = "When Current Map Ends";
+		FormatEx(duration, sizeof(duration), "%t", "Temporary");
+		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Until Map End");
 	} else {
-		FormatEx(duration, sizeof(duration), "%d Minutes", info.length);
+		FormatEx(duration, sizeof(duration), "%t", "Minutes", info.length);
 		FormatTime(dateEnd, sizeof(dateEnd), "%d %B %G @ %r", info.time_stamp_end);
 	}
 		
 	char MenuText[180];
-	
-	Format(MenuText, sizeof(MenuText), "Player Name : %s", info.clientName);
+
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Player Name", info.clientName);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Player SteamID : %s", info.clientSteamID);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Player SteamID", info.clientSteamID);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Admin Name : %s", info.adminName);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Admin Name", info.adminName);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Admin SteamID : %s", info.adminSteamID);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Admin SteamID", info.adminSteamID);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Reason : %s", info.reason);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Reason", info.reason);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Issued on Map : %s", info.map);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Issued Map", info.map);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Duration : %s", duration);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Duration", duration);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Date Issued : %s", dateStart);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Date Issued", dateStart);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
-	Format(MenuText, sizeof(MenuText), "Date End : %s", dateEnd);
+	FormatEx(MenuText, sizeof(MenuText), "%t", "Date Expires", dateEnd);
 	menu.AddItem("", MenuText, ITEMDRAW_DISABLED);
 	
 	bool canUnban = false;
@@ -502,13 +452,15 @@ void Kban_OpenKbanInfoMenu(int client, int id) {
 		canUnban = true;
 	}
 	
-	if(!canUnban && StrEqual(info.adminSteamID, steamID)) {
+	if(!canUnban && strcmp(info.adminSteamID, g_sSteamIDs[client], false) == 0) {
 		canUnban = true;
 	}
 	
-	char menuBuffer[40];
+	// Todo: Add Edit lenght and reason support via menu
+	char menuBuffer[40], sBuffer[64];
 	FormatEx(menuBuffer, sizeof(menuBuffer), "%s|%s", info.clientSteamID, info.clientIP);
-	menu.AddItem(menuBuffer, "Kb-UnRestrict Player", (canUnban) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "UnRestrict Player");
+	menu.AddItem(menuBuffer, sBuffer, (canUnban) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 	
 	menu.ExitBackButton = true;
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -542,175 +494,87 @@ int Menu_KbanInfoMenu(Menu menu, MenuAction action, int param1, int param2) {
 			char buffer[40];
 			menu.GetItem(param2, buffer, sizeof(buffer));
 			
-			char buffers[2][20];
+			char buffers[2][20]; // buffers[0] = steamid | buffers[1] = ip 
 			ExplodeString(buffer, "|", buffers, 2, sizeof(buffers[]));
-			/*
-				buffers[0] = steamid
-				buffers[1] = ip 
-			*/
-			
 			KbanType type = Kban_GetClientKbanType(-1, buffers[0], buffers[1]);
-			
+
 			int target = -1;
-			if(type == KBAN_TYPE_IP) {
+			if(type == KBAN_TYPE_IP)
 				target = Kban_GetClientByIP(buffers[1]);
-			} else {
+			else
 				target = Kban_GetClientBySteamID(buffers[0]);
-			}
-			
+
+			char sReason[64];
+			sReason = "No reason";
 			if(target != -1) {
-				Kban_RemoveBan(target, param1, "Giving another chance");
+				Kban_RemoveBan(target, param1, sReason);
 			} else {
-				char steamID[20];
-				if(!GetClientAuthId(param1, AuthId_Steam2, steamID, sizeof(steamID))) {
+				char escapedName[MAX_NAME_LENGTH * 2 + 1];
+				if(!g_hDB.Escape(g_sName[param1], escapedName, sizeof(escapedName))) {
 					return 0;
 				}
-				
-				char name[32];
-				if(!GetClientName(param1, name, sizeof(name))) {
-					return 0;
-				}
-				
-				char escapedName[32 * 2 + 1];
-				if(!g_hDB.Escape(name, escapedName, sizeof(escapedName))) {
-					return 0;
-				}
-				
-				char query[1024];
+
+				char query[MAX_QUERIE_LENGTH];
 				g_hDB.Format(query, sizeof(query),  "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
 												... "`admin_name_removed`='%s', `admin_steamid_removed`='%s', `reason_removed`,"
 												... "`time_stamp_removed`=%d",
-													escapedName, steamID, "Giving another chance", GetTime());
-													
+													escapedName, g_sSteamIDs[param1], sReason, GetTime());
+
 				g_hDB.Query(OnKbanRemove, query);
 			}
 		}
 	}
-	
+
 	return 0;
 }
 
-void DisplayLengths_Menu(int client)
-{
-	Menu menu = new Menu(Menu_KbRestrict_Lengths);
-	menu.SetTitle("[Kb-Restrict] KBan Duration");
-	menu.ExitBackButton = true;
-	
-	char LengthBufferP[64], LengthBufferT[64];
-	FormatEx(LengthBufferP, sizeof(LengthBufferP), "%s", "Permanently");
-	FormatEx(LengthBufferT, sizeof(LengthBufferT), "%s", "Temporary");
-	
-	menu.AddItem("0", LengthBufferP, CheckCommandAccess(client, "sm_rcon", ADMFLAG_RCON, true) ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
-	menu.AddItem("-1", LengthBufferT);
-	
-	for(int i = 15; i >= 15 && i < 241920; i++)
+stock void AddLength(Menu menu, int time, const char[] sUnitSingle, const char[] sUnitPlural, int maxTime) {
+	if (time >= maxTime)
 	{
-		if(i == 15 || i == 30 || i == 45)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			FormatEx(text, sizeof(text), "%d %s", i, "Minutes");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 60)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int hour = (i / 60);
-			FormatEx(text, sizeof(text), "%d %s", hour, "Hour");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 120 || i == 240 || i == 480 || i == 720)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-				
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int hour = (i / 60);
-			FormatEx(text, sizeof(text), "%d %s", hour, "Hours");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 1440)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int day = (i / 1440);
-			FormatEx(text, sizeof(text), "%d %s", day, "Day");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int day = (i / 1440);
-			FormatEx(text, sizeof(text), "%d %s", day, "Days");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 10080)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int week = (i / 10080);
-			FormatEx(text, sizeof(text), "%d %s", week, "Week");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 20160 || i == 30240)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int week = (i / 10080);
-			FormatEx(text, sizeof(text), "%d %s", week, "Weeks");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 40320)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int month = (i / 40320);
-			FormatEx(text, sizeof(text), "%d %s", month, "Month");
-			menu.AddItem(buffer, text);
-		}
-		else if(i == 80640 || i == 120960 || i == 241920)
-		{
-			if(!Kban_CheckKbanMaxLength(client, i)) {
-				continue;
-			}
-			
-			char buffer[32], text[32];
-			IntToString(i, buffer, sizeof(buffer));
-			int month = (i / 40320);
-			FormatEx(text, sizeof(text), "%d %s", month, "Months");
-			menu.AddItem(buffer, text);
+		char buffer[32], sDuration[64];
+		IntToString(time, buffer, sizeof(buffer));
+
+		if (time >= 60 && time < 1440)
+			time /= 60;
+		else if (time >= 1440 && time < 10080)
+			time /= 1440;
+		else if (time >= 10080 && time < 40320)
+			time /= 10080;
+		else if (time >= 40320)
+			time /= 40320;
+
+		FormatEx(sDuration, sizeof(sDuration), time == 1 ? sUnitSingle : sUnitPlural);
+		FormatEx(sDuration, sizeof(sDuration), "%t", sDuration, time);
+		menu.AddItem(buffer, sDuration);
+	}
+}
+
+void DisplayLengths_Menu(int client) {
+	Menu menu = new Menu(Menu_KbRestrict_Lengths);
+	menu.SetTitle("[Kb-Restrict] %t", "KBan Duration", g_sName[GetClientOfUserId(g_iClientTarget[client])]);
+	menu.ExitBackButton = true;
+
+	// -1 Will return the max time the admin can give based on his access
+	int iMaxTime = Kban_CheckKbanAdminAccess(client, -1);
+
+	char sBuffer[64];
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Permanently");
+	menu.AddItem("0", sBuffer, iMaxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
+	menu.AddItem("-1", sBuffer);
+
+	for (int i = 15; i < 241920; i++) {
+		if (i == 15 || i == 30 || i == 45) {
+			AddLength(menu, i, "Minute", "Minutes", iMaxTime);
+		} else if (i == 60 || i == 120 || i == 240 || i == 480 || i == 720) {
+			AddLength(menu, i, "Hour", "Hours", iMaxTime);
+		} else if (i == 1440 || i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640) {
+			AddLength(menu, i, "Day", "Days", iMaxTime);
+		} else if (i == 10080 || i == 20160 || i == 30240) {
+			AddLength(menu, i, "Week", "Weeks", iMaxTime);
+		} else if (i == 40320 || i == 80640 || i == 120960 || i == 241920) {
+			AddLength(menu, i, "Month", "Months", iMaxTime);
 		}
 	}
 	
@@ -760,13 +624,10 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 void DisplayReasons_Menu(int client)
 {
 	Menu menu = new Menu(Menu_Reasons);
-	char sMenuTranslate[128];
-	FormatEx(sMenuTranslate, sizeof(sMenuTranslate), "[Kb-Restrict] Please Select a Reason");
-	menu.SetTitle(sMenuTranslate);
+	menu.SetTitle("[Kb-Restrict] %t", "KBan Reason for", g_sName[GetClientOfUserId(g_iClientTarget[client])], g_iClientTargetLength[client]);
 	menu.ExitBackButton = true;
 	
 	char sBuffer[128];
-	
 	FormatEx(sBuffer, sizeof(sBuffer), "%s", "Boosting", client);
 	menu.AddItem(sBuffer, sBuffer);
 	
@@ -867,7 +728,7 @@ void Kban_OpenOfflineKbanMenu(int client, const char[] arg = "") {
 		if(arg[0]) {
 			if(StrContains(player.name, arg, false)) {
 				char menuBuffer[40];
-				FormatEx(menuBuffer, sizeof(menuBuffer), "%s (# %d)", player.name, player.userid);
+				FormatEx(menuBuffer, sizeof(menuBuffer), "%s |#%d", player.name, player.userid);
 				menu.AddItem(player.steamID, menuBuffer);
 				found = true;
 				continue;
@@ -875,7 +736,7 @@ void Kban_OpenOfflineKbanMenu(int client, const char[] arg = "") {
 		}
 		
 		char menuBuffer[40];
-		FormatEx(menuBuffer, sizeof(menuBuffer), "%s (# %d)", player.name, player.userid);
+		FormatEx(menuBuffer, sizeof(menuBuffer), "%s |#%d", player.name, player.userid);
 		menu.AddItem(player.steamID, menuBuffer);
 		found = true;
 	}
@@ -904,7 +765,7 @@ int Menu_OfflineKbanMenu(Menu menu, MenuAction action, int param1, int param2) {
 				for(int i = 0; i < g_OfflinePlayers.Length; i++) {
 					OfflinePlayer player;
 					g_OfflinePlayers.GetArray(i, player, sizeof(player));
-					if(StrEqual(steamID, player.steamID)) {
+					if(strcmp(steamID, player.steamID, false) == 0) {
 						Kban_AddOfflineBan(player, param1, 120, "Knifing");
 					}
 				}
@@ -932,7 +793,7 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 	if(!target)
 		return Plugin_Continue;
 
-	if(StrEqual(command, "say") || StrEqual(command, "say_team"))
+	if(strcmp(command, "say", false) == 0 || strcmp(command, "say_team", false) == 0)
 	{
 		if(!IsValidClient(target))
 		{

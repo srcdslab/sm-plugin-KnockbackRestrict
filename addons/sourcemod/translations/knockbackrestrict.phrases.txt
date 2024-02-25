@@ -49,20 +49,23 @@
 	}
 	"PlayerNotRestricted"
 	{
-		"en"		"You are currently not {green}Kb-Restricted{white}."
+		"#format"	"{1:s}"
+		"en"		"{olive}{1} {white}is not currently Kb-Restricted{white}."
 	}
 	"PlayerRestrcitedTemp" 
 	{
-		"en"		"You are currently restricted {green}Temporarily{white}."
+		"#format"	"{1:s}"
+		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Temporarily{white}."
 	}
 	"PlayerRestrictedPerma"
 	{
-		"en"		"You are currently restricted {green}Permanently{white}."
+		"#format"	"{1:s}"
+		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Permanently{white}."
 	}
 	"RestrictTimeLeft"
 	{
-		"#format"	"{1:s}"
-		"en"		"Your Restriction expires in {white}{1}."
+		"#format"	"{1:s},{2:s}"
+		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted. {white}(Expires in {2})"
 	}
 	"NotOwnBan"
 	{
@@ -98,6 +101,195 @@
 	"PlayerConnect"
 	{
 		"#format" 	"{1:N},{2:d}"
-		"en"		"{olive}{1} {white}has connected with {olive}{2} {white}kbans in history."
+		"en"		"{olive}{1} {white}has {olive}{2} {white}previous kbans."
 	}
+
+	// Menu
+	"No players to restrict"
+	{
+		"en"		"No players can be restricted at this moment."
+	}
+	"Commands"
+	{
+		"en"		"Commands"
+	}
+	"KBan a player"
+	{
+		"en"		"KBan a player"
+	}
+	"List of KBans"
+	{
+		"en"		"List of KBans"
+	}
+	"Offline Kban"
+	{
+		"en"		"Offline KBan"
+	}
+	"Not have permission KbList"
+	{
+		"en"		"You don't have access to view the KBan List."
+	}
+	"Online KBanned"
+	{
+		"en"		"Online KBanned"
+	}
+	"Own KbList"
+	{
+		"en"		"List of KBans you issued"
+	}
+	"Restrict a Player"
+	{
+		"en"		"Restrict a Player"
+	}
+	"All Active KBans"
+	{
+		"en"		"All Active KBans"
+	}
+	"Offline"
+	{
+		"en"		"Offline"
+	}
+	"Online"
+	{
+		"en"		"Online"
+	}
+	"No KBan Found"
+	{
+		"en"		"No KBan Found!"
+	}
+	"Infos and Actions"
+	{
+		"#format"	"{1:s}"
+		"en"		"Infos and Actions for {1}"
+	}
+	"Permanent"
+	{
+		"en"		"Permanent"
+	}
+	"Permanently"
+	{
+		"en"		"Permanently"
+	}
+	"Temporary"
+	{
+		"en"		"Temporary"
+	}
+	"Never"
+	{
+		"en"		"Never"
+	}
+	"Until Map End"
+	{
+		"en"		"Until Map End"
+	}
+	"Minute"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Minute"
+	}
+	"Minutes"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Minutes"
+	}
+	"Hour"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Hour"
+	}
+	"Hours"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Hours"
+	}
+	"Day"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Day"
+	}
+	"Days"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Days"
+	}
+	"Week"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Week"
+	}
+	"Weeks"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Weeks"
+	}
+	"Month"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Month"
+	}
+	"Months"
+	{
+		"#format"	"{1:d}"
+		"en"		"{1} Months"
+	}
+	"Player Name"
+	{
+		"#format"	"{1:s}"
+		"en"		"Player Name: {1}"
+	}
+	"Player SteamID"
+	{
+		"#format"	"{1:s}"
+		"en"		"Player SteamID: {1}"
+	}
+	"Admin Name"
+	{
+		"#format"	"{1:s}"
+		"en"		"Admin Name: {1}"
+	}
+	"Admin SteamID"
+	{
+		"#format"	"{1:s}"
+		"en"		"Admin SteamID: {1}"
+	}
+	"Reason"
+	{
+		"#format"	"{1:s}"
+		"en"		"Reason: {1}"
+	}
+	"Issued Map"
+	{
+		"#format"	"{1:s}"
+		"en"		"Issued on Map: {1}"
+	}
+	"Duration"
+	{
+		"#format"	"{1:s}"
+		"en"		"Duration: {1}"
+	}
+	"Date Issued"
+	{
+		"#format"	"{1:s}"
+		"en"		"Date Issued: {1}"
+	}
+	"Date Expires"
+	{
+		"#format"	"{1:s}"
+		"en"		"Date Expires: {1}"
+	}
+	"UnRestrict Player"
+	{
+		"en"		"UnKban Player"
+	}
+	"KBan Duration"
+	{
+		"#format"	"{1:s}"
+		"en"		"KBan Duration for {1}"
+	}
+	"KBan Reason for"
+	{
+		"#format"	"{1:s},{2:d}"
+		"en"		"KBan Reason for {1} [{2} minutes]"
+	}
+
 }
