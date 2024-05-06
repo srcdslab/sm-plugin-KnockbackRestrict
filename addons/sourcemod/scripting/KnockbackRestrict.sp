@@ -20,35 +20,33 @@ GlobalForward g_hKunbanForward;
 
 TopMenu g_hAdminMenu;
 
-int 
-	g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
-	g_iClientTarget[MAXPLAYERS + 1] = {0, ...},
-	g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
-	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
+int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
+	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
+	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... },
+	g_iDefaultLength;
 	
-bool 
-	g_bKnifeModeEnabled,
+bool g_bKnifeModeEnabled,
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
-	g_bLate = false;
+	g_bLate = false,
+	g_bSaveTempBans = true;
 
-char 
-	g_sMapName[PLATFORM_MAX_PATH],
+char g_sMapName[PLATFORM_MAX_PATH],
 	g_sName[MAXPLAYERS+1][MAX_NAME_LENGTH],
 	g_sSteamIDs[MAXPLAYERS+1][MAX_AUTHID_LENGTH],
 	g_sIPs[MAXPLAYERS+1][MAX_IP_LENGTH];
+
+float g_fReduceKnife, g_fReduceKnifeMod, g_fReducePistol, g_fReduceSMG, g_fReduceRifle, g_fReduceShotgun, g_fReduceSniper, g_fReduceSemiAutoSniper, g_fReduceGrenade;
 
 Database g_hDB;
 
 ArrayList g_allKbans;
 ArrayList g_OfflinePlayers;
 
-ConVar	
-		g_cvDefaultLength,
-		g_cvMaxBanTimeBanFlag,
-		g_cvMaxBanTimeKickFlag,
-		g_cvMaxBanTimeRconFlag,
-		g_cvSaveTempBans;
+ConVar g_cvDefaultLength,
+	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
+	g_cvSaveTempBans,
+	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
 
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -103,7 +101,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.1",
+	version 	= "3.4.2",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -132,6 +130,42 @@ public void OnPluginStart() {
 	g_cvMaxBanTimeRconFlag		= CreateConVar("sm_kbrestrict_max_bantime_rconflag", "40320", "Maximum ban time allowed for Rcon-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
+
+	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
+	g_cvReduceKnifeMod			= CreateConVar("sm_kbrestrict_reduce_knife_mod", "0.83", "Reduce knockback for knife in knife mode", _, true, 0.0, true, 1.0);
+	g_cvReducePistol			= CreateConVar("sm_kbrestrict_reduce_pistol", "0.50", "Reduce knockback for pistols", _, true, 0.0, true, 1.0);
+	g_cvReduceSMG				= CreateConVar("sm_kbrestrict_reduce_smg", "0.30", "Reduce knockback for SMG's", _, true, 0.0, true, 1.0);
+	g_cvReduceRifle				= CreateConVar("sm_kbrestrict_reduce_rifle", "0.50", "Reduce knockback for rifles", _, true, 0.0, true, 1.0);
+	g_cvReduceShotgun			= CreateConVar("sm_kbrestrict_reduce_shotgun", "0.85", "Reduce knockback for shotguns", _, true, 0.0, true, 1.0);
+	g_cvReduceSniper			= CreateConVar("sm_kbrestrict_reduce_sniper", "0.80", "Reduce knockback for snipers", _, true, 0.0, true, 1.0);
+	g_cvReduceSemiAutoSniper	= CreateConVar("sm_kbrestrict_reduce_semiautosniper", "0.70", "Reduce knockback for semi-auto snipers", _, true, 0.0, true, 1.0);
+	g_cvReduceGrenade			= CreateConVar("sm_kbrestrict_reduce_grenade", "0.95", "Reduce knockback for grenades", _, true, 0.0, true, 1.0);
+
+	// Hook CVARs
+	HookConVarChange(g_cvDefaultLength, OnConVarChanged);
+	HookConVarChange(g_cvSaveTempBans, OnConVarChanged);
+	HookConVarChange(g_cvReduceKnife, OnConVarChanged);
+	HookConVarChange(g_cvReduceKnifeMod, OnConVarChanged);
+	HookConVarChange(g_cvReducePistol, OnConVarChanged);
+	HookConVarChange(g_cvReduceSMG, OnConVarChanged);
+	HookConVarChange(g_cvReduceRifle, OnConVarChanged);
+	HookConVarChange(g_cvReduceShotgun, OnConVarChanged);
+	HookConVarChange(g_cvReduceSniper, OnConVarChanged);
+	HookConVarChange(g_cvReduceSemiAutoSniper, OnConVarChanged);
+	HookConVarChange(g_cvReduceGrenade, OnConVarChanged);
+	
+	// Initialize values
+	g_iDefaultLength = g_cvDefaultLength.IntValue;
+	g_bSaveTempBans = g_cvSaveTempBans.BoolValue;
+	g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	g_fReducePistol = g_cvReducePistol.FloatValue;
+	g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 
 	AutoExecConfig();
 
@@ -261,6 +295,31 @@ public void OnMapEnd() {
 			g_hDB.Query(OnKbanRemove, query);
 		}
 	}
+}
+
+public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
+	if (convar == g_cvDefaultLength)
+		g_iDefaultLength = g_cvDefaultLength.IntValue;
+	else if (convar == g_cvSaveTempBans)
+		g_bSaveTempBans = g_cvSaveTempBans.BoolValue;
+	else if (convar == g_cvReduceKnife)
+		g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	else if (convar == g_cvReduceKnifeMod)
+		g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	else if (convar == g_cvReducePistol)
+		g_fReducePistol = g_cvReducePistol.FloatValue;
+	else if (convar == g_cvReduceSMG)
+		g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	else if (convar == g_cvReduceRifle)
+		g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	else if (convar == g_cvReduceShotgun)
+		g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	else if (convar == g_cvReduceSniper)
+		g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	else if (convar == g_cvReduceSemiAutoSniper)
+		g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	else if (convar == g_cvReduceGrenade)
+		g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 }
 
 public void OnClientPutInServer(int client) {
@@ -530,41 +589,41 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 	/* Knife */
 	if (strcmp(sWeapon, "weapon_knife", false) == 0) {
 		if (!g_bKnifeModeEnabled)
-			damage -= (damage * 0.98);
+			damage -= (damage * g_fReduceKnife);
 		else
-			damage -= (damage * 0.83);
+			damage -= (damage * g_fReduceKnifeMod);
 	}
 
 	/* Pistols */
 	if (strcmp(sWeapon, "weapon_deagle", false) == 0)
-		damage -= (damage * 0.50);
+		damage -= (damage * g_fReducePistol);
 
 	/* SMG's */
 	if ((strcmp(sWeapon, "weapon_mac10", false) == 0) || (strcmp(sWeapon, "weapon_tmp", false) == 0) || (strcmp(sWeapon, "weapon_mp5navy", false) == 0)
 		|| (strcmp(sWeapon, "weapon_ump45", false) == 0) || (strcmp(sWeapon, "weapon_p90", false) == 0))
-		damage -= (damage * 0.30);
+		damage -= (damage * g_fReduceSMG);
 
 	/* Rifles */
 	if ((strcmp(sWeapon, "weapon_galil", false) == 0) || (strcmp(sWeapon, "weapon_famas", false) == 0) || (strcmp(sWeapon, "weapon_ak47", false) == 0)
 		|| (strcmp(sWeapon, "weapon_m4a1", false) == 0) || (strcmp(sWeapon, "weapon_sg552", false) == 0) || (strcmp(sWeapon, "weapon_aug", false) == 0)
 		|| (strcmp(sWeapon, "weapon_m249", false) == 0))
-		damage -= (damage * 0.50);
+		damage -= (damage * g_fReduceRifle);
 
 	/* ShotGuns */
 	if ((strcmp(sWeapon, "weapon_m3", false) == 0) || (strcmp(sWeapon, "weapon_xm1014", false) == 0))
-		damage -= (damage * 0.85);
+		damage -= (damage * g_fReduceShotgun);
 
 	/* Snipers */
 	if ((strcmp(sWeapon, "weapon_awp", false) == 0) || (strcmp(sWeapon, "weapon_scout", false) == 0))
-		damage -= (damage * 0.80);
+		damage -= (damage * g_fReduceSniper);
 
 	/* Semi-Auto Snipers */
 	if ((strcmp(sWeapon, "weapon_sg550", false) == 0) || (strcmp(sWeapon, "weapon_g3sg1", false) == 0))
-		damage -= (damage * 0.70);
+		damage -= (damage * g_fReduceSemiAutoSniper);
 	
 	/* Grenades */
 	if (strcmp(sWeapon, "weapon_hegrenade", false) == 0)
-		damage -= (damage * 0.95);
+		damage -= (damage * g_fReduceGrenade);
 
 	return Plugin_Changed;
 }
@@ -684,7 +743,7 @@ Action Command_KbRestrict(int client, int args) {
     }
 
 	if(!s_time[0] || !StringToIntEx(s_time, time)) {
-		time = g_cvDefaultLength.IntValue;
+		time = g_iDefaultLength;
 	}
 
 	char reason[REASON_MAX_LENGTH];
@@ -704,7 +763,7 @@ Action Command_KbRestrict(int client, int args) {
 	/* Check if admin has access to perma ban or a long ban */
 	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
 		if(time == 0) {
-			time = g_cvDefaultLength.IntValue;
+			time = g_iDefaultLength;
 		}
 		
 		/* Check Admin Access */
@@ -823,7 +882,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
     }
 
 	if(!s_time[0] || !StringToIntEx(s_time, time)) {
-		time = g_cvDefaultLength.IntValue;
+		time = g_iDefaultLength;
 	}
 
 	char reason[REASON_MAX_LENGTH];
@@ -832,7 +891,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 	/* Check if admin has access to perma ban or a long ban */
 	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
 		if(time == 0) {
-			time = g_cvDefaultLength.IntValue;
+			time = g_iDefaultLength;
 		}
 
 		/* Check Admin Access */
@@ -873,7 +932,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reason) {
 	Kban info;
 	if (length < 0) {
-		length = g_cvDefaultLength.IntValue;
+		length = g_iDefaultLength;
 	}
 
 	if(!reason[0]) {
@@ -1392,9 +1451,9 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
 
-	if (g_cvSaveTempBans.IntValue < 1 && length != -1)
+	if (!g_bSaveTempBans && length != -1)
 		g_hDB.Query(OnKbanAdded, query, arrayIndex);
-	else if (g_cvSaveTempBans.IntValue > 0)
+	else if (g_bSaveTempBans)
 		g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	g_bIsClientRestricted[target] = true;
@@ -1525,7 +1584,7 @@ int Kban_CheckKbanAdminAccess(int client, int time) {
 		cvar = g_cvMaxBanTimeRconFlag;
 
 	if(cvar == null) // Should never happen
-		return g_cvDefaultLength.IntValue;
+		return g_iDefaultLength;
 
 	if(time < 0 || time > cvar.IntValue)
 		time = cvar.IntValue;
