@@ -101,7 +101,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.2",
+	version 	= "3.4.3",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -327,7 +327,7 @@ public void OnClientPutInServer(int client) {
 }
 
 public void OnClientPostAdminCheck(int client) {
-	if(IsFakeClient(client) || IsClientSourceTV(client) || g_allKbans == null || g_OfflinePlayers == null) {
+	if(IsFakeClient(client) || IsClientSourceTV(client) || g_allKbans == null || g_OfflinePlayers == null || !IsDBConnected()) {
 		return;
 	}
 	
@@ -513,13 +513,14 @@ public Action Event_OnPlayerName(Handle event, const char[] name, bool dontBroad
 }
 
 public void OnClientConnected(int client) {
+	bool bError = false;
 	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
 	// Can't get client data, restrict him by default.
 	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
 		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
 		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
 		strcopy(sName, sizeof(sName), "Unknown");
-		g_bIsClientRestricted[client] = true;
+		bError = true;
 	}
 
 	// Initialize client data
@@ -528,7 +529,7 @@ public void OnClientConnected(int client) {
 	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
 	FormatEx(g_sName[client], sizeof(g_sName[]), sName);
 
-	if(IsIPBanned(g_sIPs[client])) {
+	if(bError || IsIPBanned(g_sIPs[client])) {
 		g_bIsClientRestricted[client] = true;
 	}
 }
@@ -1200,7 +1201,7 @@ void DB_OnConnect(Database db, const char[] error, any data)
 	{
 		/* Failure happen. Do retry with delay */
 		CreateTimer(15.0, DB_RetryConnection);
-		LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in %15 seconds. \nError: %s", error);
+		LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
 
 		return;
 	}
@@ -1211,14 +1212,24 @@ void DB_OnConnect(Database db, const char[] error, any data)
 	DB_CreateTables();
 }
 
+bool IsDBConnected()
+{
+	if(g_hDB == null)
+	{
+		ConnectToDB();
+		return false;
+	}
+
+	return true;
+}
+
 //----------------------------------------------------------------------------------------------------
 // Database Attempting Reconnect :
 //----------------------------------------------------------------------------------------------------
 Action DB_RetryConnection(Handle timer)
 {
-    if(g_hDB == null)
-        ConnectToDB();
-    
+    IsDBConnected();
+
     return Plugin_Continue;
 }
 
