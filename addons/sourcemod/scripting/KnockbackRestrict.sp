@@ -29,7 +29,8 @@ bool g_bKnifeModeEnabled,
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
 	g_bLate = false,
-	g_bSaveTempBans = true;
+	g_bSaveTempBans = true,
+	g_bConnectingToDB = false;
 
 char g_sMapName[PLATFORM_MAX_PATH],
 	g_sName[MAXPLAYERS+1][MAX_NAME_LENGTH],
@@ -101,7 +102,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.3",
+	version 	= "3.4.4",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -173,6 +174,7 @@ public void OnPluginStart() {
 	HookEvent("player_changename", Event_OnPlayerName, EventHookMode_Post);
 
 	/* CONNECT TO DB */
+	g_bConnectingToDB = false;
 	ConnectToDB();
 
 	/* Admin Menu */
@@ -1200,13 +1202,18 @@ void DB_OnConnect(Database db, const char[] error, any data)
 	if(db == null || error[0])
 	{
 		/* Failure happen. Do retry with delay */
-		CreateTimer(15.0, DB_RetryConnection);
-		LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
+		if (!g_bConnectingToDB)
+		{
+			g_bConnectingToDB = true;
+			CreateTimer(15.0, DB_RetryConnection);
+			LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
+		}
 
 		return;
 	}
 
 	LogMessage("[Kb-Restrict] Successfully connected to database!");
+	g_bConnectingToDB = false;
 	g_hDB = db;
 	g_hDB.SetCharset("utf8");
 	DB_CreateTables();
@@ -1228,9 +1235,10 @@ bool IsDBConnected()
 //----------------------------------------------------------------------------------------------------
 Action DB_RetryConnection(Handle timer)
 {
-    IsDBConnected();
+	g_bConnectingToDB = false;
+	IsDBConnected();
 
-    return Plugin_Continue;
+	return Plugin_Continue;
 }
 
 void DB_CreateTables() {
