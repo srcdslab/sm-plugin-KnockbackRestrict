@@ -46,7 +46,7 @@ ArrayList g_OfflinePlayers;
 
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
-	g_cvSaveTempBans,
+	g_cvGetRealKbanNumber, g_cvSaveTempBans,
 	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
 
 enum KbanGetType {
@@ -102,7 +102,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.4",
+	version 	= "3.4.5",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -130,6 +130,7 @@ public void OnPluginStart() {
 	g_cvMaxBanTimeKickFlag		= CreateConVar("sm_kbrestrict_max_bantime_kickflag", "720", "Maximum ban time allowed for Kick-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 	g_cvMaxBanTimeRconFlag		= CreateConVar("sm_kbrestrict_max_bantime_rconflag", "40320", "Maximum ban time allowed for Rcon-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 
+	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
 
 	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
@@ -469,7 +470,11 @@ void OnUpdateClientIP(Database db, DBResultSet results, const char[] error, int 
 
 void Kban_CallGetKbansNumber(int client) {
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", g_sSteamIDs[client]);
+	if (!g_cvGetRealKbanNumber.BoolValue) {
+		g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", g_sSteamIDs[client]);
+	} else {
+		g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' AND `is_removed`=0", g_sSteamIDs[client]);
+	}
 	g_hDB.Query(OnGetKbansNumber, query, GetClientUserId(client));
 }
 
