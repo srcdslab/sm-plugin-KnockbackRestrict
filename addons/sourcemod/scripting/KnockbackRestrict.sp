@@ -46,7 +46,7 @@ ArrayList g_OfflinePlayers;
 
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
-	g_cvGetRealKbanNumber, g_cvSaveTempBans,
+	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
 	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
 
 enum KbanGetType {
@@ -102,7 +102,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.5",
+	version 	= "3.4.6",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -130,6 +130,7 @@ public void OnPluginStart() {
 	g_cvMaxBanTimeKickFlag		= CreateConVar("sm_kbrestrict_max_bantime_kickflag", "720", "Maximum ban time allowed for Kick-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 	g_cvMaxBanTimeRconFlag		= CreateConVar("sm_kbrestrict_max_bantime_rconflag", "40320", "Maximum ban time allowed for Rcon-Flag accessible admins(0-518400)", _, true, 0.0, true, 518400.0);
 
+	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
 
@@ -498,6 +499,11 @@ void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int 
 		return;
 	}
 
+	g_iClientKbansNumber[client] = count;
+
+	if (!g_cvDisplayConnectMsg.BoolValue)
+		return;
+
 	for(int i = 1; i <= MaxClients; i++) {
 		if(!IsClientInGame(i)) {
 			continue;
@@ -507,8 +513,6 @@ void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int 
 			CPrintToChat(i, "%t", "PlayerConnect", client, count);
 		}
 	}
-
-	g_iClientKbansNumber[client] = count;
 }
 
 public Action Event_OnPlayerName(Handle event, const char[] name, bool dontBroadcast)
