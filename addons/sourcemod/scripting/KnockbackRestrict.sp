@@ -26,6 +26,7 @@ int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iDefaultLength;
 	
 bool g_bKnifeModeEnabled,
+	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
 	g_bLate = false,
@@ -102,7 +103,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.6",
+	version 	= "3.4.7",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -282,11 +283,8 @@ public void OnMapStart() {
 	/* MAP NAME */
 	GetCurrentMap(g_sMapName, sizeof(g_sMapName));
 
-	/* GET ALL KBANS */
-	CreateTimer(1.0, GetAllKbans_Timer);
-
 	/* Check all kbans by a timer */
-	CreateTimer(2.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+	CreateTimer(5.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 }
 
 public void OnMapEnd() {
@@ -331,12 +329,19 @@ public void OnClientPutInServer(int client) {
 }
 
 public void OnClientPostAdminCheck(int client) {
-	if(IsFakeClient(client) || IsClientSourceTV(client) || g_allKbans == null || g_OfflinePlayers == null || !IsDBConnected()) {
+	if(g_bUserVerified[client] || g_allKbans == null || g_OfflinePlayers == null || !IsDBConnected()) {
 		return;
 	}
 	
+	// We need to get last only last ban
 	char queryEx[MAX_QUERIE_LENGTH];
-	g_hDB.Format(queryEx, sizeof(queryEx), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' OR `client_ip`='%s'", g_sSteamIDs[client], g_sIPs[client]);
+	g_hDB.Format(queryEx, sizeof(queryEx), 
+		"SELECT id, client_name, client_steamid, client_ip, admin_name, admin_steamid, reason, map, length, time_stamp_start, time_stamp_end, is_expired, is_removed \
+		FROM `KbRestrict_CurrentBans` \
+		WHERE `client_steamid`='%s' OR `client_ip`='%s' \
+		ORDER BY id DESC LIMIT 1", 
+		g_sSteamIDs[client], g_sIPs[client]
+	);
 	g_hDB.Query(OnClientPostAdminCheck_Query, queryEx, GetClientUserId(client));
 	
 	for(int i = 0; i < g_OfflinePlayers.Length; i++) {
@@ -372,7 +377,7 @@ public void OnClientPostAdminCheck(int client) {
 }
 
 void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[] error, int userid) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_SELECT, error);
 		return;
 	}
@@ -389,6 +394,7 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 		bool isExpired = (results.FetchInt(11) == 0) ? false : true;
 		bool isRemoved = (results.FetchInt(12) == 0) ? false : true;
 
+		// Store all data results we need
 		Kban info;
 		Kban_GetRowResults(10, results, info);
 
@@ -422,6 +428,8 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 
 		isKbanned = false;
 	}
+
+	g_bUserVerified[client] = true;
 	
 	if(isKbanned) {
 		g_bIsClientRestricted[client] = true;
@@ -463,7 +471,7 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 }
 
 void OnUpdateClientIP(Database db, DBResultSet results, const char[] error, int userid) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_UPDATE, error);
 		return;
 	}
@@ -472,15 +480,15 @@ void OnUpdateClientIP(Database db, DBResultSet results, const char[] error, int 
 void Kban_CallGetKbansNumber(int client) {
 	char query[MAX_QUERIE_LENGTH];
 	if (!g_cvGetRealKbanNumber.BoolValue) {
-		g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", g_sSteamIDs[client]);
+		g_hDB.Format(query, sizeof(query), "SELECT client_steamid FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s'", g_sSteamIDs[client]);
 	} else {
-		g_hDB.Format(query, sizeof(query), "SELECT * FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' AND `is_removed`=0", g_sSteamIDs[client]);
+		g_hDB.Format(query, sizeof(query), "SELECT client_steamid FROM `KbRestrict_CurrentBans` WHERE `client_steamid`='%s' AND `is_removed`=0", g_sSteamIDs[client]);
 	}
 	g_hDB.Query(OnGetKbansNumber, query, GetClientUserId(client));
 }
 
 void OnGetKbansNumber(Database db, DBResultSet results, const char[] error, int userid) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_SELECT, error);
 		return;
 	} 
@@ -535,6 +543,7 @@ public void OnClientConnected(int client) {
 	}
 
 	// Initialize client data
+	g_bUserVerified[client] = false;
 	g_bIsClientRestricted[client] = false;
 	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), sIP);
 	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
@@ -542,6 +551,11 @@ public void OnClientConnected(int client) {
 
 	if(bError || IsIPBanned(g_sIPs[client])) {
 		g_bIsClientRestricted[client] = true;
+	}
+
+	// Avoid useless queries
+	if (IsFakeClient(client) || IsClientSourceTV(client)) {
+		g_bUserVerified[client] = true;
 	}
 }
 
@@ -562,6 +576,7 @@ public void OnClientDisconnect(int client) {
 	FormatEx(g_sName[client], sizeof(g_sName[]), "");
 	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), "");
 	g_bIsClientRestricted[client] = false;
+	g_bUserVerified[client] = false;
 	g_iClientKbansNumber[client] = 0;
 }
 
@@ -645,6 +660,21 @@ Action CheckAllKbans_Timer(Handle timer) {
 		return Plugin_Handled;
 	}
 
+	// Player was not verified yet, force the verification
+	for(int i = 1; i <= MaxClients; i++) {
+		if(!IsClientInGame(i))
+			continue;
+
+		if (g_bUserVerified[i])
+			continue;
+
+		if (IsFakeClient(i) || IsClientSourceTV(i))
+			continue;
+
+		OnClientConnected(i);
+		OnClientPostAdminCheck(i);
+	}
+
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
@@ -660,7 +690,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 }
 
 void OnKbanExpired(Database db, DBResultSet results, const char[] error, int id) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_UPDATE, error);
 		return;
 	}
@@ -1101,55 +1131,6 @@ stock void CheckPlayerExpireTime(int lefttime, char[] TimeLeft, int maxlength) {
 //----------------------------------------------------------------------------------------------------
 // Database stuffs
 //----------------------------------------------------------------------------------------------------
-Action GetAllKbans_Timer(Handle timer) {
-	if(g_hDB == null) {
-		CreateTimer(1.0, GetAllKbans_Timer);
-		return Plugin_Stop;
-	}
-
-	g_hDB.Query(OnGetAllKbans, "SELECT * FROM `KbRestrict_CurrentBans`");
-	return Plugin_Continue;
-}
-
-void OnGetAllKbans(Database db, DBResultSet results, const char[] error, any data) {
-	if(results == null || error[0]) {
-		Kban_GiveError(ERROR_TYPE_SELECT, error);
-		return;
-	}
-
-	while(results.FetchRow()) {
-		bool push = false;
-			
-		bool isExpired = (results.FetchInt(11) == 0) ? false : true;
-		bool isRemoved = (results.FetchInt(12) == 0) ? false : true;
-
-		if(!isExpired && !isRemoved) {
-			push = true;
-		}
-
-		if(push) {		
-			Kban info;
-			for(int i = 0; i <= 10; i++) {
-				Kban_GetRowResults(i, results, info);
-			}
-
-			g_allKbans.PushArray(info, sizeof(info));
-		}
- 	}
-
- 	/* incase of a late load */
- 	if(g_bLate) {
-	 	for(int i = 1; i <= MaxClients; i++) {
-			if(!IsClientInGame(i)) {
-				continue;
-			}
-
-			OnClientConnected(i);
-			OnClientPostAdminCheck(i);
-		}
-	}
-}
-
 void Kban_GetRowResults(int num, DBResultSet results, Kban info) {
 	switch(num) {
 		case 0: {
@@ -1232,6 +1213,8 @@ bool IsDBConnected()
 {
 	if(g_hDB == null)
 	{
+		if (!g_bConnectingToDB)
+			LogError("[Kb-Restrict] Database connection is lost, attempting to reconnect...");
 		ConnectToDB();
 		return false;
 	}
@@ -1412,7 +1395,7 @@ void Kban_PublishKunban(int target, int admin, const char[] reason) {
 }
 
 void OnKbanRemove(Database db, DBResultSet results, const char[] error, any data) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_UPDATE, error);
 		return;
 	}
@@ -1568,13 +1551,13 @@ void OnKbanPublished(Database db, DBResultSet results, const char[] error, int a
 		LogError("Invalid arrayIndex %d. g_allKbans has length %d.", arrayIndex, g_allKbans.Length);
 	}
 
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_INSERT, error);
 	}
 }
 
 void OnKbanAdded(Database db, DBResultSet results, const char[] error, int arrayIndex) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_INSERT, error);
 		return;
 	}
@@ -1621,7 +1604,7 @@ int Kban_CheckKbanAdminAccess(int client, int time) {
 }
 
 void OnGetKbanID(Database db, DBResultSet results, const char[] error, int arrayIndex) {
-	if(results == null || error[0]) {
+	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_SELECT, error);
 		return;
 	}
