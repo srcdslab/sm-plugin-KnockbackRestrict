@@ -9,6 +9,8 @@
 #include <cstrike>
 #include <KnockbackRestrict>
 
+#define DB_CHARSET "utf8mb4"
+#define DB_COLLATION "utf8mb4_unicode_ci"
 #define KR_Tag "{aqua}[Kb-Restrict]{white}"
 #define NOSTEAMID "NO STEAMID"
 #define MAX_IP_LENGTH 16
@@ -103,7 +105,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.7",
+	version 	= "3.4.8",
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -1205,7 +1207,7 @@ void DB_OnConnect(Database db, const char[] error, any data)
 	LogMessage("[Kb-Restrict] Successfully connected to database!");
 	g_bConnectingToDB = false;
 	g_hDB = db;
-	g_hDB.SetCharset("utf8");
+	g_hDB.SetCharset(DB_CHARSET);
 	DB_CreateTables();
 }
 
@@ -1266,11 +1268,12 @@ void DB_CreateTables() {
 										`admin_name_removed` varchar(%d) NOT NULL, \
 										`admin_steamid_removed` varchar(%d) NOT NULL, \
 										`reason_removed` varchar(%d) NOT NULL, \
-										PRIMARY KEY(`id`))", 
+										PRIMARY KEY(`id`)) CHARACTER SET %s COLLATE %s;",
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_IP_LENGTH, // Client
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, // Admin
 										REASON_MAX_LENGTH, PLATFORM_MAX_PATH, // Reason + Map
-										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, REASON_MAX_LENGTH // Admin + Remove reason
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, REASON_MAX_LENGTH, // Admin + Remove reason
+										DB_CHARSET, DB_COLLATION
 	);
  
 	T_Tables.AddQuery(query);
@@ -1283,8 +1286,8 @@ void DB_CreateTables() {
 										`client_name` varchar(%d) NOT NULL, \
 										`client_steamid` varchar(%d) NOT NULL, \
 										`time_stamp` int(20) NOT NULL, \
-										PRIMARY KEY(`id`))",
-										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH
+										PRIMARY KEY(`id`)) CHARACTER SET %s COLLATE %s;",
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
 		  
 	T_Tables.AddQuery(query);
@@ -1297,8 +1300,8 @@ void DB_CreateTables() {
 										`client_name` varchar(%d) NOT NULL, \
 										`client_steamid` varchar(%d) NOT NULL, \
 										`time_stamp` int(20) NOT NULL, \
-										PRIMARY KEY(`id`))",
-										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH
+										PRIMARY KEY(`id`)) CHARACTER SET %s COLLATE %s;",
+										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
 
 	T_Tables.AddQuery(query);
