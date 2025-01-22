@@ -11,6 +11,12 @@
 #endif
 #define _KnockbackRestrict_included_
 
+#define KR_V_MAJOR   3
+#define KR_V_MINOR   5
+#define KR_V_PATCH   0
+
+#define KR_VERSION   "3.5.0"
+
 public SharedPlugin __pl_KnockbackRestrict = 
 {
 	name = "KnockbackRestrict",
@@ -67,7 +73,40 @@ native bool KR_ClientStatus(int client);
  *********************************************************/
 native int KR_GetClientKbansNumber(int client);
 
+/**
+ * Called when the plugin becomes available.
+ * 
+ * @noreturn
+ */
+forward void KR_OnPluginStart();
 
+/**
+ * Called when the plugin becomes unavailable.
+ * This can happen when the plugin is reloaded or unloaded.
+ * 
+ * @noreturn
+ */
+forward void KR_OnPluginEnd();
+
+/**
+ * Called when a client is knockback restricted.
+ *
+ * @param client        Client index
+ * @param admin         Admin index
+ * @param length        Ban length in minutes (0 = permanent, -1 = temporary)
+ * @param reason        Ban reason
+ * @param kbansNumber   Number of active knockback restrictions for this client
+ * @noreturn
+ */
 forward void KR_OnClientKbanned(int client, int admin, int length, const char[] reason, int kbansNumber);
 
+/**
+ * Called when a client's knockback restriction is removed.
+ *
+ * @param client        Client index
+ * @param admin         Admin index
+ * @param reason        Unban reason
+ * @param kbansNumber   Number of active knockback restrictions for this client
+ * @noreturn
+ */
 forward void KR_OnClientKunbanned(int client, int admin, const char[] reason, int kbansNumber);

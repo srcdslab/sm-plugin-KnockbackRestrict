@@ -19,6 +19,8 @@
 
 GlobalForward g_hKbanForward;
 GlobalForward g_hKunbanForward;
+GlobalForward g_hForward_StatusOK;
+GlobalForward g_hForward_StatusNotOK;
 
 TopMenu g_hAdminMenu;
 
@@ -105,7 +107,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.8",
+	version 	= KR_VERSION,
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
@@ -224,8 +226,28 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	/* Forward */
 	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
+	g_hForward_StatusOK = new GlobalForward("KR_OnPluginOK", ET_Ignore);
+	g_hForward_StatusNotOK = new GlobalForward("KR_OnPluginNotOK", ET_Ignore);
 
 	return APLRes_Success;
+}
+
+public void OnAllPluginsLoaded()
+{
+	SendForward_Available();
+}
+
+public void OnPluginPauseChange(bool pause)
+{
+	if (pause)
+		SendForward_NotAvailable();
+	else
+		SendForward_Available();
+}
+
+public void OnPluginEnd()
+{
+	SendForward_NotAvailable();
 }
 
 int Native_KR_BanClient(Handle plugin, int params) {
@@ -1778,4 +1800,16 @@ void Kban_GiveSuccess(SuccessType type) {
 
 bool IsValidClient(int client) {
 	return (1 <= client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
+}
+
+stock void SendForward_Available()
+{
+	Call_StartForward(g_hForward_StatusOK);
+	Call_Finish();
+}
+
+stock void SendForward_NotAvailable()
+{
+	Call_StartForward(g_hForward_StatusNotOK);
+	Call_Finish();
 }
