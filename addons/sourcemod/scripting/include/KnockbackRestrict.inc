@@ -11,11 +11,11 @@
 #endif
 #define _KnockbackRestrict_included_
 
-#define KR_V_MAJOR   3
-#define KR_V_MINOR   5
-#define KR_V_PATCH   0
+#define KR_V_MAJOR   "3"
+#define KR_V_MINOR   "4"
+#define KR_V_PATCH   "9"
 
-#define KR_VERSION   "3.5.0"
+#define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
 
 public SharedPlugin __pl_KnockbackRestrict = 
 {
@@ -72,21 +72,6 @@ native bool KR_ClientStatus(int client);
  * @return			Kbans number
  *********************************************************/
 native int KR_GetClientKbansNumber(int client);
-
-/**
- * Called when the plugin becomes available.
- * 
- * @noreturn
- */
-forward void KR_OnPluginStart();
-
-/**
- * Called when the plugin becomes unavailable.
- * This can happen when the plugin is reloaded or unloaded.
- * 
- * @noreturn
- */
-forward void KR_OnPluginEnd();
 
 /**
  * Called when a client is knockback restricted.
