@@ -105,7 +105,7 @@ public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
 	description = "Adjust knockback of certain weapons for the kbanned players",
-	version 	= "3.4.8",
+	version 	= KR_VERSION,
 	url			= "https://github.com/srcdslab/sm-plugin-KnockbackRestrict"
 };
 
