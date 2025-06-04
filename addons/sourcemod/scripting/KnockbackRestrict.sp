@@ -391,6 +391,7 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 
 	bool isKbanned = false;
 	Kban tempInfo;
+	int currentTime = GetTime();
 
 	while(results.FetchRow()) {
 		bool isExpired = (results.FetchInt(11) == 0) ? false : true;
@@ -398,37 +399,64 @@ void OnClientPostAdminCheck_Query(Database db, DBResultSet results, const char[]
 
 		// Store all data results we need
 		Kban info;
-		Kban_GetRowResults(10, results, info);
-
-		if((!isExpired && !isRemoved) || (info.time_stamp_end > GetTime()) && !isRemoved) {
-			isKbanned = true;
-			for(int i = 0; i <= 10; i++) {
-				Kban_GetRowResults(i, results, tempInfo);
-			}
-
-			/* Check if ip is not known */
-			if(strcmp(tempInfo.clientIP, "Unknown", false) == 0) {
-				/* Update IP to DB */
-				char query[MAX_QUERIE_LENGTH];
-				g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", g_sIPs[client], tempInfo.id);
-				g_hDB.Query(OnUpdateClientIP, query);
-
-				FormatEx(tempInfo.clientIP, sizeof(tempInfo.clientIP), "%s", g_sIPs[client]);
-				for(int i = 0; i < g_allKbans.Length; i++) {
-					Kban exInfo;
-					g_allKbans.GetArray(i, exInfo, sizeof(exInfo));
-					if(exInfo.id == tempInfo.id) {
-						FormatEx(exInfo.clientIP, sizeof(exInfo.clientIP), "%s", tempInfo.clientIP);
-						g_allKbans.SetArray(i, exInfo, sizeof(exInfo));
-						break;
-					}
-				}
-			}
-
-			break;
+		for(int i = 0; i <= 10; i++) {
+			Kban_GetRowResults(i, results, info);
 		}
 
-		isKbanned = false;
+		// Skip if kban is expired or manually removed
+		if (isExpired || isRemoved) {
+			continue;
+		}
+
+		// Time validation only if kban is not expired
+		bool isTimeValid = false;
+		
+		if (info.time_stamp_end == 0) { // Permanent kban
+			isTimeValid = true;
+		} else if (info.time_stamp_end > 0) { // Temporary kban
+			isTimeValid = (info.time_stamp_start <= currentTime && info.time_stamp_end > currentTime);
+		} else if (info.time_stamp_end == -1) { // Session kban
+			isTimeValid = true;
+		}
+
+		// Kban conditions check
+		if (isTimeValid) {
+			// Additional check for IP-based kbans
+			if (strcmp(info.clientIP, g_sIPs[client], false) == 0) {
+				// If kban is by IP, verify that steamid is not already kbanned
+				if (strcmp(info.clientSteamID, NOSTEAMID, false) == 0 || 
+					strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0) {
+					isKbanned = true;
+					tempInfo = info;
+				}
+			} else if (strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0) {
+				// SteamID kban
+				isKbanned = true;
+				tempInfo = info;
+			}
+
+			if (isKbanned) {
+				/* Check if IP is not known */
+				if(strcmp(tempInfo.clientIP, "Unknown", false) == 0) {
+					/* Update IP in DB */
+					char query[MAX_QUERIE_LENGTH];
+					g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", g_sIPs[client], tempInfo.id);
+					g_hDB.Query(OnUpdateClientIP, query);
+
+					FormatEx(tempInfo.clientIP, sizeof(tempInfo.clientIP), "%s", g_sIPs[client]);
+					for(int i = 0; i < g_allKbans.Length; i++) {
+						Kban exInfo;
+						g_allKbans.GetArray(i, exInfo, sizeof(exInfo));
+						if(exInfo.id == tempInfo.id) {
+							FormatEx(exInfo.clientIP, sizeof(exInfo.clientIP), "%s", tempInfo.clientIP);
+							g_allKbans.SetArray(i, exInfo, sizeof(exInfo));
+							break;
+						}
+					}
+				}
+				break;
+			}
+		}
 	}
 
 	g_bUserVerified[client] = true;
@@ -774,17 +802,17 @@ Action Command_KbRestrict(int client, int args) {
 
 	len = BreakString(Arguments, arg, sizeof(arg));
 	if(len == -1)
-    {
-        len = 0;
-        Arguments[0] = '\0';
-    }
+	{
+		len = 0;
+		Arguments[0] = '\0';
+	}
 
 	if((next_len = BreakString(Arguments[len], s_time, sizeof(s_time))) != -1)
-        len += next_len;
+		len += next_len;
 	else {
 		len = 0;
 		Arguments[0] = '\0';
-    }
+	}
 
 	if(!s_time[0] || !StringToIntEx(s_time, time)) {
 		time = g_iDefaultLength;
@@ -842,10 +870,10 @@ Action Command_KbUnRestrict(int client, int args) {
 	int len;
 	len = BreakString(Arguments, arg, sizeof(arg));
 	if(len == -1)
-    {
-        len = 0;
-        Arguments[0] = '\0';
-    }
+	{
+		len = 0;
+		Arguments[0] = '\0';
+	}
 
 	int target = FindTarget(client, arg, false, false);
 	if(target < 1) {
@@ -913,17 +941,17 @@ Action Command_OfflineKbRestrict(int client, int args) {
 
 	len = BreakString(Arguments, arg, sizeof(arg));
 	if(len == -1)
-    {
-        len = 0;
-        Arguments[0] = '\0';
-    }
+	{
+		len = 0;
+		Arguments[0] = '\0';
+	}
 
 	if((next_len = BreakString(Arguments[len], s_time, sizeof(s_time))) != -1)
-        len += next_len;
+		len += next_len;
 	else {
 		len = 0;
 		Arguments[0] = '\0';
-    }
+	}
 
 	if(!s_time[0] || !StringToIntEx(s_time, time)) {
 		time = g_iDefaultLength;
@@ -1138,43 +1166,33 @@ void Kban_GetRowResults(int num, DBResultSet results, Kban info) {
 		case 0: {
 			info.id = results.FetchInt(num);
 		}
-
 		case 1: {
 			results.FetchString(num, info.clientName, sizeof(info.clientName));
 		}
-
 		case 2: {
 			results.FetchString(num, info.clientSteamID, sizeof(info.clientSteamID));
 		}
-
 		case 3: {
 			results.FetchString(num, info.clientIP, sizeof(info.clientIP));
 		}
-
 		case 4: {
 			results.FetchString(num, info.adminName, sizeof(info.adminName));
 		}
-
 		case 5: {
 			results.FetchString(num, info.adminSteamID, sizeof(info.adminSteamID));
 		}
-
 		case 6: {
 			results.FetchString(num, info.reason, sizeof(info.reason));
 		}
-
 		case 7: {
 			results.FetchString(num, info.map, sizeof(info.map));
 		}
-
 		case 8: {
 			info.length = results.FetchInt(num);
 		}
-
 		case 9: {
 			info.time_stamp_start = results.FetchInt(num);
 		}
-
 		case 10: {
 			info.time_stamp_end = results.FetchInt(num);
 		}
@@ -1275,7 +1293,7 @@ void DB_CreateTables() {
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, REASON_MAX_LENGTH, // Admin + Remove reason
 										DB_CHARSET, DB_COLLATION
 	);
- 
+
 	T_Tables.AddQuery(query);
 
 	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_srvlogs` ( \
@@ -1289,7 +1307,7 @@ void DB_CreateTables() {
 										PRIMARY KEY(`id`)) CHARACTER SET %s COLLATE %s;",
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
-		  
+		
 	T_Tables.AddQuery(query);
 
 	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_weblogs` ( \
@@ -1568,9 +1586,9 @@ void OnKbanAdded(Database db, DBResultSet results, const char[] error, int array
 	Kban info;
 	// g_allKbans.GetArray(arrayIndex, info, sizeof(info));
 	if (!g_allKbans.GetArray(arrayIndex, info, sizeof(info))) {
-        LogError("Failed to retrieve element at index %d from g_allKbans.", arrayIndex);
-        return;
-    }
+		LogError("Failed to retrieve element at index %d from g_allKbans.", arrayIndex);
+		return;
+	}
 
 	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"SELECT `id` FROM `KbRestrict_CurrentBans` WHERE"
@@ -1778,4 +1796,10 @@ void Kban_GiveSuccess(SuccessType type) {
 
 bool IsValidClient(int client) {
 	return (1 <= client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
+}
+
+char[] GetTimeString(int timestamp) {
+	char buffer[64];
+	FormatTime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", timestamp);
+	return buffer;
 }

@@ -13,7 +13,7 @@
 
 #define KR_V_MAJOR   "3"
 #define KR_V_MINOR   "4"
-#define KR_V_PATCH   "9"
+#define KR_V_PATCH   "11"
 
 #define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
 
