@@ -291,5 +291,10 @@
 		"#format"	"{1:s},{2:d}"
 		"en"		"KBan Reason for {1} [{2} minutes]"
 	}
+	"PlayerNotVerified"
+	{
+		"#format" 		"{1:s}"
+		"en"			"{1} has not been verified. Please wait thirty seconds before retrying."
+	}
 
 }
