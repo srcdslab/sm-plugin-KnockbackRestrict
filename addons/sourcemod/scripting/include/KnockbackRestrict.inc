@@ -12,8 +12,8 @@
 #define _KnockbackRestrict_included_
 
 #define KR_V_MAJOR   "3"
-#define KR_V_MINOR   "4"
-#define KR_V_PATCH   "11"
+#define KR_V_MINOR   "5"
+#define KR_V_PATCH   "0"
 
 #define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
 
