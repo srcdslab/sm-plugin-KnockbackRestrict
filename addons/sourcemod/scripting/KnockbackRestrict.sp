@@ -9,6 +9,10 @@
 #include <cstrike>
 #include <KnockbackRestrict>
 
+#undef REQUIRE_PLUGIN
+#tryinclude <knifemode>
+#define REQUIRE_PLUGIN
+
 #define DB_CHARSET "utf8mb4"
 #define DB_COLLATION "utf8mb4_unicode_ci"
 #define KR_Tag "{aqua}[Kb-Restrict]{white}"
@@ -585,17 +589,7 @@ public void OnClientDisconnect(int client) {
 	g_iClientKbansNumber[client] = 0;
 }
 
-public void OnLibraryAdded(const char[] name) {
-	if (strcmp(name, "KnifeMode", false) == 0) {
-		g_bKnifeModeEnabled = true;
-	}
-}
-
 public void OnLibraryRemoved(const char[] name) {
-	if (strcmp(name, "KnifeMode", false) == 0) {
-		g_bKnifeModeEnabled = false;
-	}
-
 	if (strcmp(name, "adminmenu", false) == 0) {
 		g_hAdminMenu = null;
 	}
@@ -1767,3 +1761,10 @@ void Kban_GiveSuccess(SuccessType type) {
 bool IsValidClient(int client) {
 	return (1 <= client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
 }
+
+#if defined _KnifeMode_Included
+public void KnifeMode_OnToggle(bool bEnabled)
+{
+	g_bKnifeModeEnabled = bEnabled;
+}
+#endif
