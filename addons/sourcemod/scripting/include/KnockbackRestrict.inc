@@ -13,9 +13,11 @@
 
 #define KR_V_MAJOR   "3"
 #define KR_V_MINOR   "6"
-#define KR_V_PATCH   "0"
+#define KR_V_PATCH   "4"
 
 #define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
+
+typedef LengthCallback = function void(int admin, int target, int time);
 
 public SharedPlugin __pl_KnockbackRestrict = 
 {
@@ -35,6 +37,7 @@ public void __pl_knockbackrestrict_SetNTVOptional()
 	MarkNativeAsOptional("KR_UnBanClient");
 	MarkNativeAsOptional("KR_ClientStatus");
 	MarkNativeAsOptional("KR_GetClientKbansNumber");
+	MarkNativeAsOptional("KR_DisplayLengthsMenu");
 }
 #endif
 
@@ -72,6 +75,16 @@ native bool KR_ClientStatus(int client);
  * @return			Kbans number
  *********************************************************/
 native int KR_GetClientKbansNumber(int client);
+
+/*********************************************************
+ * Display KBan Lengths Menu
+ *
+ * @param admin  	Admin Index
+ * @param target	Target Index
+ * @param callback	The callback where you can get the time in seconds
+ * @noreturn	
+ *********************************************************/
+native void KR_DisplayLengthsMenu(int admin, int target, LengthCallback callback);
 
 /**
  * Called when a client is knockback restricted.

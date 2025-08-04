@@ -323,8 +323,9 @@ int Menu_KbanMenu(Menu menu, MenuAction action, int param1, int param2) {
 			char buffer[10];
 			menu.GetItem(param2, buffer, sizeof(buffer));
 			int userid = StringToInt(buffer);
-			g_iClientTarget[param1] = userid;
-			DisplayLengths_Menu(param1);
+			int target = GetClientOfUserId(userid);
+			if(IsValidClient(target))
+				KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
 		}
 	}
 	
@@ -555,26 +556,26 @@ void DisplayLengths_Menu(int client) {
 	menu.ExitBackButton = true;
 
 	// -1 Will return the max time the admin can give based on his access
-	int iMaxTime = Kban_CheckKbanAdminAccess(client, -1);
+	int maxTime = Kban_CheckKbanAdminAccess(client, -1);
 
-	char sBuffer[64];
-	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Permanently");
-	menu.AddItem("0", sBuffer, iMaxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+	char buffer[64];
+	FormatEx(buffer, sizeof(buffer), "%t", "Permanently");
+	menu.AddItem("0", buffer, maxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
-	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
-	menu.AddItem("-1", sBuffer);
+	FormatEx(buffer, sizeof(buffer), "%t", "Temporary");
+	menu.AddItem("-1", buffer);
 
 	for (int i = 15; i < 241920; i++) {
 		if (i == 15 || i == 30 || i == 45) {
-			AddLength(menu, i, "Minute", "Minutes", iMaxTime);
+			AddLength(menu, i, "Minute", "Minutes", maxTime);
 		} else if (i == 60 || i == 120 || i == 240 || i == 480 || i == 720) {
-			AddLength(menu, i, "Hour", "Hours", iMaxTime);
+			AddLength(menu, i, "Hour", "Hours", maxTime);
 		} else if (i == 1440 || i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640) {
-			AddLength(menu, i, "Day", "Days", iMaxTime);
+			AddLength(menu, i, "Day", "Days", maxTime);
 		} else if (i == 10080 || i == 20160 || i == 30240) {
-			AddLength(menu, i, "Week", "Weeks", iMaxTime);
+			AddLength(menu, i, "Week", "Weeks", maxTime);
 		} else if (i == 40320 || i == 80640 || i == 120960 || i == 241920) {
-			AddLength(menu, i, "Month", "Months", iMaxTime);
+			AddLength(menu, i, "Month", "Months", maxTime);
 		}
 	}
 	
@@ -606,16 +607,28 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 
 			if(!target)
 				return 0;
-	
+		
 			if(IsValidClient(target))
 			{
-				g_iClientTargetLength[param1] = time;
-				DisplayReasons_Menu(param1);
+				Call_StartForward(g_hLengthsMenuForward);
+				
+				Call_PushCell(param1);
+				Call_PushCell(target);
+				Call_PushCell(time);
+				
+				Call_Finish();
 			}
 		}
 	}
 	
 	return 0;
+}
+
+void Menu_OnLengthClick(int admin, int target, int time) {
+	if(!g_bIsClientRestricted[target]) {
+		g_iClientTargetLength[admin] = time;
+		DisplayReasons_Menu(admin);
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -669,10 +682,11 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 				if(!target)
 					return 0;
 
-				if(IsValidClient(target))
-					DisplayLengths_Menu(param1);
-				else
+				if(IsValidClient(target)) {
+					KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
+				} else {
 					CPrintToChat(param1, "%s %T", KR_Tag, "PlayerNotValid", param1);
+				}
 			}
 		}
 		
