@@ -128,7 +128,7 @@ WeaponGroup g_WeaponGroups[8] = {
 	{ "mac10,tmp,mp5navy,ump45,p90", 0.30, null, "sm_kbrestrict_reduce_smg", 5 },
 	
 	/* Rifles */
-	{ "galil,famas,ak47,aug,sg552", 0.5, null, "sm_kbrestrict_reduce_rifle", 5 },
+	{ "galil,famas,ak47,m4a1,aug,sg552", 0.5, null, "sm_kbrestrict_reduce_rifle", 6 },
 	
 	/* Snipers */
 	{ "awp,scout", 0.8, null, "sm_kbrestrict_reduce_sniper", 2 },
