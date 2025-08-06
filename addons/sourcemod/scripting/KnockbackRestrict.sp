@@ -30,8 +30,7 @@ TopMenu g_hAdminMenu;
 
 int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
-	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... },
-	g_iDefaultLength;
+	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
 	
 bool g_bKnifeModeEnabled,
 	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
@@ -44,7 +43,7 @@ char g_sMapName[PLATFORM_MAX_PATH],
 	g_sSteamIDs[MAXPLAYERS+1][MAX_AUTHID_LENGTH],
 	g_sIPs[MAXPLAYERS+1][MAX_IP_LENGTH];
 
-float g_fReduceKnifeMod;
+float g_fReduceKnife, g_fReduceKnifeMod, g_fReducePistol, g_fReduceSMG, g_fReduceRifle, g_fReduceShotgun, g_fReduceSniper, g_fReduceSemiAutoSniper, g_fReduceGrenade;
 
 Database g_hDB;
 
@@ -54,7 +53,7 @@ ArrayList g_OfflinePlayers;
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
 	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
-	g_cvReduceKnifeMod;
+	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
 
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -105,41 +104,6 @@ enum struct OfflinePlayer {
 	char ip[MAX_IP_LENGTH];
 }
 
-/* Weapons Groups */
-enum struct WeaponGroup {
-	char weapons[128];
-	float percentage;
-	ConVar cvar;
-	char cvarName[40];
-	int maxWeapons;
-}
-
-WeaponGroup g_WeaponGroups[8] = {
-	/* Knife */
-	{ "knife", 0.98, null, "sm_kbrestrict_reduce_knife", 1},
-	
-	/* Pistols */
-	{ "glock,usp,p228,deagle,elite,fiveseven", 0.5, null, "sm_kbrestrict_reduce_pistol", 6 },
-	
-	/* Shotguns */
-	{ "m3,xm1014", 0.85, null, "sm_kbrestrict_reduce_shotgun", 2 },
-	
-	/* SMGs */
-	{ "mac10,tmp,mp5navy,ump45,p90", 0.30, null, "sm_kbrestrict_reduce_smg", 5 },
-	
-	/* Rifles */
-	{ "galil,famas,ak47,m4a1,aug,sg552", 0.5, null, "sm_kbrestrict_reduce_rifle", 6 },
-	
-	/* Snipers */
-	{ "awp,scout", 0.8, null, "sm_kbrestrict_reduce_sniper", 2 },
-	
-	/* Rifles */
-	{ "g3sg1,sg550", 0.85, null, "sm_kbrestrict_reduce_semiautosniper", 2 },
-	
-	/* Hegrenade */
-	{ "hegrenade", 0.95, null, "sm_kbrestrict_reduce_grenade", 1 }
-};
-
 public Plugin myinfo = {
 	name 		= "KnockbackRestrict",
 	author		= "Dolly, Rushaway",
@@ -176,11 +140,38 @@ public void OnPluginStart() {
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
 	
 	/* Get Reduce Cvars */
+	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
 	g_cvReduceKnifeMod			= CreateConVar("sm_kbrestrict_reduce_knife_mod", "0.83", "Reduce knockback for knife in knife mode", _, true, 0.0, true, 1.0);
-	GetReduceCvars();
+	g_cvReducePistol			= CreateConVar("sm_kbrestrict_reduce_pistol", "0.50", "Reduce knockback for pistols", _, true, 0.0, true, 1.0);
+	g_cvReduceSMG				= CreateConVar("sm_kbrestrict_reduce_smg", "0.30", "Reduce knockback for SMG's", _, true, 0.0, true, 1.0);
+	g_cvReduceRifle				= CreateConVar("sm_kbrestrict_reduce_rifle", "0.50", "Reduce knockback for rifles", _, true, 0.0, true, 1.0);
+	g_cvReduceShotgun			= CreateConVar("sm_kbrestrict_reduce_shotgun", "0.85", "Reduce knockback for shotguns", _, true, 0.0, true, 1.0);
+	g_cvReduceSniper			= CreateConVar("sm_kbrestrict_reduce_sniper", "0.80", "Reduce knockback for snipers", _, true, 0.0, true, 1.0);
+	g_cvReduceSemiAutoSniper	= CreateConVar("sm_kbrestrict_reduce_semiautosniper", "0.70", "Reduce knockback for semi-auto snipers", _, true, 0.0, true, 1.0);
+	g_cvReduceGrenade			= CreateConVar("sm_kbrestrict_reduce_grenade", "0.95", "Reduce knockback for grenades", _, true, 0.0, true, 1.0);
+	
+	// Hook CVARs
+	g_cvReduceKnife.AddChangeHook(OnConVarChanged);
+	g_cvReduceKnifeMod.AddChangeHook(OnConVarChanged);
+	g_cvReducePistol.AddChangeHook(OnConVarChanged);
+	g_cvReduceSMG.AddChangeHook(OnConVarChanged);
+	g_cvReduceRifle.AddChangeHook(OnConVarChanged);
+	g_cvReduceShotgun.AddChangeHook(OnConVarChanged);
+	g_cvReduceSniper.AddChangeHook(OnConVarChanged);
+	g_cvReduceSemiAutoSniper.AddChangeHook(OnConVarChanged);
+	g_cvReduceGrenade.AddChangeHook(OnConVarChanged);
 	
 	// Initialize values
-
+	g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	g_fReducePistol = g_cvReducePistol.FloatValue;
+	g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
+	
 	AutoExecConfig();
 
 	/* HOOK EVENTS */
@@ -197,15 +188,6 @@ public void OnPluginStart() {
 
 	/* Prefix */
 	CSetPrefix(KR_Tag);
-}
-
-void GetReduceCvars() {
-	for (int i = 0; i < sizeof(g_WeaponGroups); i++) {
-		char val[5];
-		FloatToString(g_WeaponGroups[i].percentage, val, sizeof(val));
-		g_WeaponGroups[i].cvar = CreateConVar(g_WeaponGroups[i].cvarName, val, "Reduce knockback for the desired weapon", _, true, 0.0, true, 1.0);
-		g_WeaponGroups[i].cvar.AddChangeHook(OnConVarChanged);
-	}
 }
 
 /***********************************/
@@ -308,17 +290,24 @@ public void OnMapStart() {
 }
 
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
-	if(convar == g_cvReduceKnifeMod) {
-		g_fReduceKnifeMod = convar.FloatValue;
-		return;
-	}
-	
-	for (int i = 0; i < sizeof(g_WeaponGroups); i++) {
-		if(convar == g_WeaponGroups[i].cvar) {
-			g_WeaponGroups[i].percentage = convar.FloatValue;
-			return;
-		}
-	}
+	if (convar == g_cvReduceKnife)
+		g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	else if (convar == g_cvReduceKnifeMod)
+		g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	else if (convar == g_cvReducePistol)
+		g_fReducePistol = g_cvReducePistol.FloatValue;
+	else if (convar == g_cvReduceSMG)
+		g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	else if (convar == g_cvReduceRifle)
+		g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	else if (convar == g_cvReduceShotgun)
+		g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	else if (convar == g_cvReduceSniper)
+		g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	else if (convar == g_cvReduceSemiAutoSniper)
+		g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	else if (convar == g_cvReduceGrenade)
+		g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 }
 
 public void OnClientPostAdminCheck(int client) {
@@ -1537,7 +1526,7 @@ int Kban_CheckKbanAdminAccess(int client, int time) {
 		cvar = g_cvMaxBanTimeRconFlag;
 
 	if(cvar == null) // Should never happen
-		return g_iDefaultLength;
+		return g_cvDefaultLength.IntValue;
 
 	if(time < 0 || time > cvar.IntValue)
 		time = cvar.IntValue;
@@ -1732,21 +1721,44 @@ void ChangeWeaponsKnockback(int client, bool kbanned) {
 		return;
 	}
 	
-	for (int i = 0; i < sizeof(g_WeaponGroups); i++) {
-		if(g_bKnifeModeEnabled && StrContains(g_WeaponGroups[i].weapons, "knife", false) != -1) {
-			ZR_SetClientKnockbackPercentagePerWeapon(client, "knife", g_fReduceKnifeMod);
-			continue;
-		}
-		
-		if(g_WeaponGroups[i].maxWeapons == 1) {
-			ZR_SetClientKnockbackPercentagePerWeapon(client, g_WeaponGroups[i].weapons, g_WeaponGroups[i].cvar.FloatValue);
-			continue;
-		}
-
-		char[][] thisWeapons = new char[g_WeaponGroups[i].maxWeapons][20];
-		ExplodeString(g_WeaponGroups[i].weapons, ",", thisWeapons, g_WeaponGroups[i].maxWeapons, 20);
-		for (int j = 0; j < g_WeaponGroups[i].maxWeapons; j++) {
-			ZR_SetClientKnockbackPercentagePerWeapon(client, thisWeapons[j], g_WeaponGroups[i].cvar.FloatValue);
-		}
-	}
+	/* Knife */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "knife", (g_bKnifeModeEnabled) ? g_fReduceKnifeMod : g_fReduceKnife);
+	
+	/* Pistols */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "glock", g_fReducePistol);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "usp", g_fReducePistol);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "p228", g_fReducePistol);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "deagle", g_fReducePistol);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "elite", g_fReducePistol);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "fiveseven", g_fReducePistol);
+	
+	/* SMGs */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "mac10", g_fReduceSMG);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "tmp", g_fReduceSMG);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "mp5navy", g_fReduceSMG);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "ump45", g_fReduceSMG);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "p90", g_fReduceSMG);
+	
+	/* Rifles */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "galil", g_fReduceRifle);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "famas", g_fReduceRifle);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "ak47", g_fReduceRifle);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "m4a1", g_fReduceRifle);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "aug", g_fReduceRifle);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "sg552", g_fReduceRifle);
+	
+	/* Shotguns */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "m3", g_fReduceShotgun);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "xm1014", g_fReduceShotgun);
+	
+	/* SemiAutoSnipers */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "g3sg1", g_fReduceSemiAutoSniper);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "sg550", g_fReduceSemiAutoSniper);
+	
+	/* Snipers */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "awp", g_fReduceSniper);
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "scout", g_fReduceSniper);
+	
+	/* Hegrenade */
+	ZR_SetClientKnockbackPercentagePerWeapon(client, "hegrenade", g_fReduceGrenade);
 }
