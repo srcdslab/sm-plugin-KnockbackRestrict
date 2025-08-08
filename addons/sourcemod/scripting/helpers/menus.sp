@@ -556,29 +556,29 @@ void DisplayLengths_Menu(int client) {
 	menu.ExitBackButton = true;
 
 	// -1 Will return the max time the admin can give based on his access
-	int maxTime = Kban_CheckKbanAdminAccess(client, -1);
+	int iMaxTime = Kban_CheckKbanAdminAccess(client, -1);
 
-	char buffer[64];
-	FormatEx(buffer, sizeof(buffer), "%t", "Permanently");
-	menu.AddItem("0", buffer, maxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
+	char sBuffer[64];
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Permanently");
+	menu.AddItem("0", sBuffer, iMaxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
-	FormatEx(buffer, sizeof(buffer), "%t", "Temporary");
-	menu.AddItem("-1", buffer);
+	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
+	menu.AddItem("-1", sBuffer);
 
 	for (int i = 15; i < 241920; i++) {
 		if (i == 15 || i == 30 || i == 45) {
-			AddLength(menu, i, "Minute", "Minutes", maxTime);
+			AddLength(menu, i, "Minute", "Minutes", iMaxTime);
 		} else if (i == 60 || i == 120 || i == 240 || i == 480 || i == 720) {
-			AddLength(menu, i, "Hour", "Hours", maxTime);
+			AddLength(menu, i, "Hour", "Hours", iMaxTime);
 		} else if (i == 1440 || i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640) {
-			AddLength(menu, i, "Day", "Days", maxTime);
+			AddLength(menu, i, "Day", "Days", iMaxTime);
 		} else if (i == 10080 || i == 20160 || i == 30240) {
-			AddLength(menu, i, "Week", "Weeks", maxTime);
+			AddLength(menu, i, "Week", "Weeks", iMaxTime);
 		} else if (i == 40320 || i == 80640 || i == 120960 || i == 241920) {
-			AddLength(menu, i, "Month", "Months", maxTime);
+			AddLength(menu, i, "Month", "Months", iMaxTime);
 		}
 	}
-	
+
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
@@ -591,15 +591,15 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 	{
 		case MenuAction_End:
 			delete menu;
-			
+
 		case MenuAction_Cancel:
 		{
 			if(param2 == MenuCancel_ExitBack)
 				Kban_OpenKbanMenu(param1);
 		}
-		
+
 		case MenuAction_Select:
-		{		
+		{
 			char buffer[64];
 			menu.GetItem(param2, buffer, sizeof(buffer));
 			int time = StringToInt(buffer);
@@ -607,15 +607,15 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 
 			if(!target)
 				return 0;
-		
+
 			if(IsValidClient(target))
 			{
 				Call_StartForward(g_hLengthsMenuForward);
-				
+
 				Call_PushCell(param1);
 				Call_PushCell(target);
 				Call_PushCell(time);
-				
+
 				Call_Finish();
 			}
 		}
@@ -624,8 +624,10 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 	return 0;
 }
 
-void Menu_OnLengthClick(int admin, int target, int time) {
-	if(!g_bIsClientRestricted[target]) {
+void Menu_OnLengthClick(int admin, int target, int time)
+{
+	if (!g_bIsClientRestricted[target])
+	{
 		g_iClientTargetLength[admin] = time;
 		DisplayReasons_Menu(admin);
 	}
@@ -682,11 +684,10 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 				if(!target)
 					return 0;
 
-				if(IsValidClient(target)) {
+				if (IsValidClient(target))
 					KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
-				} else {
+				else
 					CPrintToChat(param1, "%s %T", KR_Tag, "PlayerNotValid", param1);
-				}
 			}
 		}
 		
