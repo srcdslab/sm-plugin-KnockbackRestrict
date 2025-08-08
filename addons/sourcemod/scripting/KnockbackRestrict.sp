@@ -8,10 +8,10 @@
 #include <adminmenu>
 #include <cstrike>
 #include <KnockbackRestrict>
-#include <zombiereloaded>
 
 #undef REQUIRE_PLUGIN
 #tryinclude <knifemode>
+#include <zombiereloaded>
 #define REQUIRE_PLUGIN
 
 #define DB_CHARSET "utf8mb4"
@@ -37,6 +37,10 @@ bool g_bKnifeModeEnabled,
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
 	g_bConnectingToDB = false;
+
+#if !defined _zr_included
+bool g_bLate;
+#endif
 
 char g_sMapName[PLATFORM_MAX_PATH],
 	g_sName[MAXPLAYERS+1][MAX_NAME_LENGTH],
@@ -188,11 +192,32 @@ public void OnPluginStart() {
 
 	/* Prefix */
 	CSetPrefix(KR_Tag);
+	
+	#if !defined _zr_included
+	/* Incase of a late load */
+	if(g_bLate) {
+		for(int i = 1; i <= MaxClients; i++) {
+			if(!IsClientInGame(i)) {
+				continue;
+			}
+
+			if(IsFakeClient(i) || IsClientSourceTV(i)) {
+				continue;
+			}
+
+			OnClientPutInServer(i);
+		}
+	}
+	#endif
 }
 
 /***********************************/
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
+	#if !defined _zr_included
+	g_bLate = late;
+	#endif
+	
 	RegPluginLibrary("KnockbackRestrict");
 
 	CreateNative("KR_BanClient", Native_KR_BanClient);
@@ -309,6 +334,72 @@ public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] n
 	else if (convar == g_cvReduceGrenade)
 		g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 }
+
+/* if zr is not included */
+#if !defined _zr_included
+public void OnClientPutInServer(int client) {
+	SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
+}
+
+public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype) {
+	if(victim < 1 || victim > MaxClients || !IsClientInGame(victim) || attacker < 1 || attacker > MaxClients || !IsClientInGame(attacker)) {
+		return Plugin_Continue;
+	}
+
+	if(!g_bIsClientRestricted[attacker]) {
+		return Plugin_Continue;
+	}
+
+	if(GetClientTeam(attacker) != CS_TEAM_CT) {
+		return Plugin_Continue;
+	}
+
+	char sWeapon[32];
+	GetClientWeapon(attacker, sWeapon, 32);
+
+	/* Knife */
+	if (strcmp(sWeapon, "weapon_knife", false) == 0) {
+		if (!g_bKnifeModeEnabled)
+			damage -= (damage * g_fReduceKnife);
+		else
+			damage -= (damage * g_fReduceKnifeMod);
+	}
+
+	/* Pistols */
+	if (strcmp(sWeapon, "weapon_deagle", false) == 0)
+		damage -= (damage * g_fReducePistol);
+
+	/* SMG's */
+	if ((strcmp(sWeapon, "weapon_mac10", false) == 0) || (strcmp(sWeapon, "weapon_tmp", false) == 0) || (strcmp(sWeapon, "weapon_mp5navy", false) == 0)
+		|| (strcmp(sWeapon, "weapon_ump45", false) == 0) || (strcmp(sWeapon, "weapon_p90", false) == 0))
+		damage -= (damage * g_fReduceSMG);
+
+	/* Rifles */
+	if ((strcmp(sWeapon, "weapon_galil", false) == 0) || (strcmp(sWeapon, "weapon_famas", false) == 0) || (strcmp(sWeapon, "weapon_ak47", false) == 0)
+		|| (strcmp(sWeapon, "weapon_m4a1", false) == 0) || (strcmp(sWeapon, "weapon_sg552", false) == 0) || (strcmp(sWeapon, "weapon_aug", false) == 0)
+		|| (strcmp(sWeapon, "weapon_m249", false) == 0))
+		damage -= (damage * g_fReduceRifle);
+
+	/* ShotGuns */
+	if ((strcmp(sWeapon, "weapon_m3", false) == 0) || (strcmp(sWeapon, "weapon_xm1014", false) == 0))
+		damage -= (damage * g_fReduceShotgun);
+
+	/* Snipers */
+	if ((strcmp(sWeapon, "weapon_awp", false) == 0) || (strcmp(sWeapon, "weapon_scout", false) == 0))
+		damage -= (damage * g_fReduceSniper);
+
+	/* Semi-Auto Snipers */
+	if ((strcmp(sWeapon, "weapon_sg550", false) == 0) || (strcmp(sWeapon, "weapon_g3sg1", false) == 0))
+		damage -= (damage * g_fReduceSemiAutoSniper);
+	
+	/* Grenades */
+	if (strcmp(sWeapon, "weapon_hegrenade", false) == 0)
+		damage -= (damage * g_fReduceGrenade);
+
+	return Plugin_Changed;
+}
+#endif
+//////////////////////////
 
 public void OnClientPostAdminCheck(int client) {
 	if (!g_cvDisplayConnectMsg.BoolValue)
@@ -480,7 +571,10 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 	
 	if(isKbanned) {
 		g_bIsClientRestricted[client] = true;
+		
+		#if defined _zr_included
 		ChangeWeaponsKnockback(client, true);
+		#endif
 		
 		KbanType type = Kban_GetClientKbanType(client);
 		if(type != KBAN_TYPE_NOTKBANNED) {
@@ -555,7 +649,9 @@ public void OnClientConnected(int client) {
 
 	if(bError || IsIPBanned(g_sIPs[client])) {
 		g_bIsClientRestricted[client] = true;
+		#if defined _zr_included
 		ChangeWeaponsKnockback(client, true);
+		#endif
 	}
 
 	// Avoid useless queries
@@ -1268,7 +1364,9 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 	}
 
 	g_bIsClientRestricted[target] = false;
+	#if defined _zr_included
 	ChangeWeaponsKnockback(target, false);
+	#endif
 	
 	Kban_PublishKunban(target, admin, reason);
 
@@ -1397,7 +1495,9 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	g_bIsClientRestricted[target] = true;
+	#if defined _zr_included
 	ChangeWeaponsKnockback(target, true);
+	#endif
 	
 	g_iClientKbansNumber[target]++;
 
@@ -1715,6 +1815,7 @@ public void KnifeMode_OnToggle(bool bEnabled)
 }
 #endif
 
+#if defined _zr_included
 void ChangeWeaponsKnockback(int client, bool kbanned) {
 	if(!kbanned) {
 		ZR_ResetClientKnockbackPercenagePerWeapon(client);
@@ -1762,3 +1863,4 @@ void ChangeWeaponsKnockback(int client, bool kbanned) {
 	/* Hegrenade */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "hegrenade", g_fReduceGrenade);
 }
+#endif
