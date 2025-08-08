@@ -257,16 +257,16 @@ int Native_KR_GetClientKbansNumber(Handle plugin, int params) {
 int Native_KR_DisplayLengthsMenu(Handle plugin, int params) {
 	int client = GetNativeCell(1);
 
-	if(client < 1 || client > MaxClients || !IsClientInGame(client)) {
+	if (client < 1 || client > MaxClients || !IsClientInGame(client)) {
 		return 0;
 	}
-	
+
 	int target = GetNativeCell(2);
-	
-	if(target < 1 || target > MaxClients || !IsClientInGame(target)) {
+
+	if (target < 1 || target > MaxClients || !IsClientInGame(target)) {
 		return 0;
 	}
-	
+
 	g_iClientTarget[client] = GetClientUserId(target);
 	g_hLengthsMenuForward.AddFunction(plugin, GetNativeFunction(3));
 	DisplayLengths_Menu(client);
@@ -1321,7 +1321,7 @@ void OnKbanRemove(Database db, DBResultSet results, const char[] error, any data
 }
 
 void Kban_AddBan(int target, int admin, int length, char[] reason) {
-	if(g_bIsClientRestricted[target]) {
+	if (g_bIsClientRestricted[target]) {
 		return;
 	}
 	
@@ -1716,14 +1716,14 @@ public void KnifeMode_OnToggle(bool bEnabled)
 #endif
 
 void ChangeWeaponsKnockback(int client, bool kbanned) {
-	if(!kbanned) {
+	if (!kbanned) {
 		ZR_ResetClientKnockbackPercenagePerWeapon(client);
 		return;
 	}
-	
+
 	/* Knife */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "knife", (g_bKnifeModeEnabled) ? g_fReduceKnifeMod : g_fReduceKnife);
-	
+
 	/* Pistols */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "glock", g_fReducePistol);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "usp", g_fReducePistol);
@@ -1731,14 +1731,14 @@ void ChangeWeaponsKnockback(int client, bool kbanned) {
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "deagle", g_fReducePistol);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "elite", g_fReducePistol);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "fiveseven", g_fReducePistol);
-	
+
 	/* SMGs */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "mac10", g_fReduceSMG);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "tmp", g_fReduceSMG);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "mp5navy", g_fReduceSMG);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "ump45", g_fReduceSMG);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "p90", g_fReduceSMG);
-	
+
 	/* Rifles */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "galil", g_fReduceRifle);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "famas", g_fReduceRifle);
@@ -1746,19 +1746,19 @@ void ChangeWeaponsKnockback(int client, bool kbanned) {
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "m4a1", g_fReduceRifle);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "aug", g_fReduceRifle);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "sg552", g_fReduceRifle);
-	
+
 	/* Shotguns */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "m3", g_fReduceShotgun);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "xm1014", g_fReduceShotgun);
-	
+
 	/* SemiAutoSnipers */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "g3sg1", g_fReduceSemiAutoSniper);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "sg550", g_fReduceSemiAutoSniper);
-	
+
 	/* Snipers */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "awp", g_fReduceSniper);
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "scout", g_fReduceSniper);
-	
+
 	/* Hegrenade */
 	ZR_SetClientKnockbackPercentagePerWeapon(client, "hegrenade", g_fReduceGrenade);
 }
