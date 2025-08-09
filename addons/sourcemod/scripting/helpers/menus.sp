@@ -323,8 +323,9 @@ int Menu_KbanMenu(Menu menu, MenuAction action, int param1, int param2) {
 			char buffer[10];
 			menu.GetItem(param2, buffer, sizeof(buffer));
 			int userid = StringToInt(buffer);
-			g_iClientTarget[param1] = userid;
-			DisplayLengths_Menu(param1);
+			int target = GetClientOfUserId(userid);
+			if(IsValidClient(target))
+				KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
 		}
 	}
 	
@@ -577,7 +578,7 @@ void DisplayLengths_Menu(int client) {
 			AddLength(menu, i, "Month", "Months", iMaxTime);
 		}
 	}
-	
+
 	menu.Display(client, MENU_TIME_FOREVER);
 }
 
@@ -590,15 +591,15 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 	{
 		case MenuAction_End:
 			delete menu;
-			
+
 		case MenuAction_Cancel:
 		{
 			if(param2 == MenuCancel_ExitBack)
 				Kban_OpenKbanMenu(param1);
 		}
-		
+
 		case MenuAction_Select:
-		{		
+		{
 			char buffer[64];
 			menu.GetItem(param2, buffer, sizeof(buffer));
 			int time = StringToInt(buffer);
@@ -606,16 +607,30 @@ int Menu_KbRestrict_Lengths(Menu menu, MenuAction action, int param1, int param2
 
 			if(!target)
 				return 0;
-	
+
 			if(IsValidClient(target))
 			{
-				g_iClientTargetLength[param1] = time;
-				DisplayReasons_Menu(param1);
+				Call_StartForward(g_hLengthsMenuForward);
+
+				Call_PushCell(param1);
+				Call_PushCell(target);
+				Call_PushCell(time);
+
+				Call_Finish();
 			}
 		}
 	}
 	
 	return 0;
+}
+
+void Menu_OnLengthClick(int admin, int target, int time)
+{
+	if (!g_bIsClientRestricted[target])
+	{
+		g_iClientTargetLength[admin] = time;
+		DisplayReasons_Menu(admin);
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -669,8 +684,8 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 				if(!target)
 					return 0;
 
-				if(IsValidClient(target))
-					DisplayLengths_Menu(param1);
+				if (IsValidClient(target))
+					KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
 				else
 					CPrintToChat(param1, "%s %T", KR_Tag, "PlayerNotValid", param1);
 			}
