@@ -1,4 +1,7 @@
 > [!IMPORTANT]
+> If using KbRestrict with Zombie:Reloaded, **you need** to use ZR minimum version [3.12.16](https://github.com/srcdslab/sm-plugin-zombiereloaded/releases) or newest.
+
+> [!WARNING]
 > For versions 3.4.0 and 3.5.0: If you are using an older version of the plugin, please perform the migration by [following the provided steps](#migration).
 
 You can find the web panel [here](https://github.com/srcdslab/kbans-web)
