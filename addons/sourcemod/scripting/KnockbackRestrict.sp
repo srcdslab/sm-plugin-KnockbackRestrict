@@ -153,7 +153,7 @@ public void OnPluginStart() {
 	g_cvReduceSniper			= CreateConVar("sm_kbrestrict_reduce_sniper", "0.80", "Reduce knockback for snipers", _, true, 0.0, true, 1.0);
 	g_cvReduceSemiAutoSniper	= CreateConVar("sm_kbrestrict_reduce_semiautosniper", "0.70", "Reduce knockback for semi-auto snipers", _, true, 0.0, true, 1.0);
 	g_cvReduceGrenade			= CreateConVar("sm_kbrestrict_reduce_grenade", "0.95", "Reduce knockback for grenades", _, true, 0.0, true, 1.0);
-	
+
 	// Hook CVARs
 	g_cvReduceKnife.AddChangeHook(OnConVarChanged);
 	g_cvReduceKnifeMod.AddChangeHook(OnConVarChanged);
@@ -175,7 +175,7 @@ public void OnPluginStart() {
 	g_fReduceSniper = g_cvReduceSniper.FloatValue;
 	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
 	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
-	
+
 	AutoExecConfig();
 
 	/* HOOK EVENTS */
@@ -335,71 +335,11 @@ public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] n
 		g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 }
 
-/* if zr is not included */
 #if !defined _zr_included
 public void OnClientPutInServer(int client) {
 	SDKHook(client, SDKHook_OnTakeDamage, OnTakeDamage);
 }
-
-public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype) {
-	if(victim < 1 || victim > MaxClients || !IsClientInGame(victim) || attacker < 1 || attacker > MaxClients || !IsClientInGame(attacker)) {
-		return Plugin_Continue;
-	}
-
-	if(!g_bIsClientRestricted[attacker]) {
-		return Plugin_Continue;
-	}
-
-	if(GetClientTeam(attacker) != CS_TEAM_CT) {
-		return Plugin_Continue;
-	}
-
-	char sWeapon[32];
-	GetClientWeapon(attacker, sWeapon, 32);
-
-	/* Knife */
-	if (strcmp(sWeapon, "weapon_knife", false) == 0) {
-		if (!g_bKnifeModeEnabled)
-			damage -= (damage * g_fReduceKnife);
-		else
-			damage -= (damage * g_fReduceKnifeMod);
-	}
-
-	/* Pistols */
-	if (strcmp(sWeapon, "weapon_deagle", false) == 0)
-		damage -= (damage * g_fReducePistol);
-
-	/* SMG's */
-	if ((strcmp(sWeapon, "weapon_mac10", false) == 0) || (strcmp(sWeapon, "weapon_tmp", false) == 0) || (strcmp(sWeapon, "weapon_mp5navy", false) == 0)
-		|| (strcmp(sWeapon, "weapon_ump45", false) == 0) || (strcmp(sWeapon, "weapon_p90", false) == 0))
-		damage -= (damage * g_fReduceSMG);
-
-	/* Rifles */
-	if ((strcmp(sWeapon, "weapon_galil", false) == 0) || (strcmp(sWeapon, "weapon_famas", false) == 0) || (strcmp(sWeapon, "weapon_ak47", false) == 0)
-		|| (strcmp(sWeapon, "weapon_m4a1", false) == 0) || (strcmp(sWeapon, "weapon_sg552", false) == 0) || (strcmp(sWeapon, "weapon_aug", false) == 0)
-		|| (strcmp(sWeapon, "weapon_m249", false) == 0))
-		damage -= (damage * g_fReduceRifle);
-
-	/* ShotGuns */
-	if ((strcmp(sWeapon, "weapon_m3", false) == 0) || (strcmp(sWeapon, "weapon_xm1014", false) == 0))
-		damage -= (damage * g_fReduceShotgun);
-
-	/* Snipers */
-	if ((strcmp(sWeapon, "weapon_awp", false) == 0) || (strcmp(sWeapon, "weapon_scout", false) == 0))
-		damage -= (damage * g_fReduceSniper);
-
-	/* Semi-Auto Snipers */
-	if ((strcmp(sWeapon, "weapon_sg550", false) == 0) || (strcmp(sWeapon, "weapon_g3sg1", false) == 0))
-		damage -= (damage * g_fReduceSemiAutoSniper);
-	
-	/* Grenades */
-	if (strcmp(sWeapon, "weapon_hegrenade", false) == 0)
-		damage -= (damage * g_fReduceGrenade);
-
-	return Plugin_Changed;
-}
 #endif
-//////////////////////////
 
 public void OnClientPostAdminCheck(int client) {
 	if (!g_cvDisplayConnectMsg.BoolValue)
@@ -686,6 +626,66 @@ public void OnLibraryRemoved(const char[] name) {
 		g_hAdminMenu = null;
 	}
 }
+
+#if !defined _zr_included
+public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &damage, int &damagetype) {
+	if(victim < 1 || victim > MaxClients || !IsClientInGame(victim) || attacker < 1 || attacker > MaxClients || !IsClientInGame(attacker)) {
+		return Plugin_Continue;
+	}
+
+	if(!g_bIsClientRestricted[attacker]) {
+		return Plugin_Continue;
+	}
+
+	if(GetClientTeam(attacker) != CS_TEAM_CT) {
+		return Plugin_Continue;
+	}
+
+	char sWeapon[32];
+	GetClientWeapon(attacker, sWeapon, 32);
+
+	/* Knife */
+	if (strcmp(sWeapon, "weapon_knife", false) == 0) {
+		if (!g_bKnifeModeEnabled)
+			damage -= (damage * g_fReduceKnife);
+		else
+			damage -= (damage * g_fReduceKnifeMod);
+	}
+
+	/* Pistols */
+	if (strcmp(sWeapon, "weapon_deagle", false) == 0)
+		damage -= (damage * g_fReducePistol);
+
+	/* SMG's */
+	if ((strcmp(sWeapon, "weapon_mac10", false) == 0) || (strcmp(sWeapon, "weapon_tmp", false) == 0) || (strcmp(sWeapon, "weapon_mp5navy", false) == 0)
+		|| (strcmp(sWeapon, "weapon_ump45", false) == 0) || (strcmp(sWeapon, "weapon_p90", false) == 0))
+		damage -= (damage * g_fReduceSMG);
+
+	/* Rifles */
+	if ((strcmp(sWeapon, "weapon_galil", false) == 0) || (strcmp(sWeapon, "weapon_famas", false) == 0) || (strcmp(sWeapon, "weapon_ak47", false) == 0)
+		|| (strcmp(sWeapon, "weapon_m4a1", false) == 0) || (strcmp(sWeapon, "weapon_sg552", false) == 0) || (strcmp(sWeapon, "weapon_aug", false) == 0)
+		|| (strcmp(sWeapon, "weapon_m249", false) == 0))
+		damage -= (damage * g_fReduceRifle);
+
+	/* ShotGuns */
+	if ((strcmp(sWeapon, "weapon_m3", false) == 0) || (strcmp(sWeapon, "weapon_xm1014", false) == 0))
+		damage -= (damage * g_fReduceShotgun);
+
+	/* Snipers */
+	if ((strcmp(sWeapon, "weapon_awp", false) == 0) || (strcmp(sWeapon, "weapon_scout", false) == 0))
+		damage -= (damage * g_fReduceSniper);
+
+	/* Semi-Auto Snipers */
+	if ((strcmp(sWeapon, "weapon_sg550", false) == 0) || (strcmp(sWeapon, "weapon_g3sg1", false) == 0))
+		damage -= (damage * g_fReduceSemiAutoSniper);
+	
+	/* Grenades */
+	if (strcmp(sWeapon, "weapon_hegrenade", false) == 0)
+		damage -= (damage * g_fReduceGrenade);
+
+	return Plugin_Changed;
+}
+#endif
 
 Action CheckAllKbans_Timer(Handle timer) {
 	if (g_allKbans == null)
