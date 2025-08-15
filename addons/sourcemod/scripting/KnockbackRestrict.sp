@@ -166,15 +166,7 @@ public void OnPluginStart() {
 	g_cvReduceGrenade.AddChangeHook(OnConVarChanged);
 	
 	// Initialize values
-	g_fReduceKnife = g_cvReduceKnife.FloatValue;
-	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
-	g_fReducePistol = g_cvReducePistol.FloatValue;
-	g_fReduceSMG = g_cvReduceSMG.FloatValue;
-	g_fReduceRifle = g_cvReduceRifle.FloatValue;
-	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
-	g_fReduceSniper = g_cvReduceSniper.FloatValue;
-	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
-	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
+	UpdateReduceValues();
 
 	AutoExecConfig();
 
@@ -312,6 +304,22 @@ public void OnMapStart() {
 
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+}
+
+public void OnConfigsExecuted() {
+	UpdateReduceValues();
+}
+
+void UpdateReduceValues() {
+	g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	g_fReducePistol = g_cvReducePistol.FloatValue;
+	g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
 }
 
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
@@ -516,15 +524,13 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 		ChangeWeaponsKnockback(client, true);
 		#endif
 		
-		KbanType type = Kban_GetClientKbanType(client);
-		if(type != KBAN_TYPE_NOTKBANNED) {
-			return;
-		}
-
+		// Fix: Add the player to g_allKbans immediately when kbanned
+		// Remove the redundant type check that was preventing proper synchronization
 		g_allKbans.PushArray(tempInfo, sizeof(tempInfo));
 	} else {
 		g_bIsClientRestricted[client] = false;
 
+		// Fix: Check if player was previously restricted and remove from g_allKbans
 		KbanType type = Kban_GetClientKbanType(client);
 		if(type == KBAN_TYPE_NOTKBANNED) {
 			return;
