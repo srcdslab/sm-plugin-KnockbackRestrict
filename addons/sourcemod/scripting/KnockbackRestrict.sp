@@ -348,6 +348,7 @@ public void OnClientPutInServer(int client) {
 
 public void OnClientPostAdminCheck(int client) {
 	if (IsFakeClient(client) || IsClientSourceTV(client)) {
+		g_bUserVerified[client] = true;
 		return;
 	}
 
