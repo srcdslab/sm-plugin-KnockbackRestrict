@@ -38,9 +38,7 @@ bool g_bKnifeModeEnabled,
 	g_bIsClientTypingReason[MAXPLAYERS + 1] = { false, ... },
 	g_bConnectingToDB = false;
 
-#if !defined _zr_included
 bool g_bLate;
-#endif
 
 char g_sMapName[PLATFORM_MAX_PATH],
 	g_sName[MAXPLAYERS+1][MAX_NAME_LENGTH],
@@ -166,15 +164,7 @@ public void OnPluginStart() {
 	g_cvReduceGrenade.AddChangeHook(OnConVarChanged);
 	
 	// Initialize values
-	g_fReduceKnife = g_cvReduceKnife.FloatValue;
-	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
-	g_fReducePistol = g_cvReducePistol.FloatValue;
-	g_fReduceSMG = g_cvReduceSMG.FloatValue;
-	g_fReduceRifle = g_cvReduceRifle.FloatValue;
-	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
-	g_fReduceSniper = g_cvReduceSniper.FloatValue;
-	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
-	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
+	UpdateReduceValues();
 
 	AutoExecConfig();
 
@@ -193,7 +183,6 @@ public void OnPluginStart() {
 	/* Prefix */
 	CSetPrefix(KR_Tag);
 	
-	#if !defined _zr_included
 	/* Incase of a late load */
 	if(g_bLate) {
 		for(int i = 1; i <= MaxClients; i++) {
@@ -204,19 +193,19 @@ public void OnPluginStart() {
 			if(IsFakeClient(i) || IsClientSourceTV(i)) {
 				continue;
 			}
-
+			
+			#if !defined _zr_included
 			OnClientPutInServer(i);
+			#endif
+			OnClientPostAdminCheck(i);
 		}
 	}
-	#endif
 }
 
 /***********************************/
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
-	#if !defined _zr_included
 	g_bLate = late;
-	#endif
 	
 	RegPluginLibrary("KnockbackRestrict");
 
@@ -314,6 +303,22 @@ public void OnMapStart() {
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 }
 
+public void OnConfigsExecuted() {
+	UpdateReduceValues();
+}
+
+void UpdateReduceValues() {
+	g_fReduceKnife = g_cvReduceKnife.FloatValue;
+	g_fReduceKnifeMod = g_cvReduceKnifeMod.FloatValue;
+	g_fReducePistol = g_cvReducePistol.FloatValue;
+	g_fReduceSMG = g_cvReduceSMG.FloatValue;
+	g_fReduceRifle = g_cvReduceRifle.FloatValue;
+	g_fReduceShotgun = g_cvReduceShotgun.FloatValue;
+	g_fReduceSniper = g_cvReduceSniper.FloatValue;
+	g_fReduceSemiAutoSniper = g_cvReduceSemiAutoSniper.FloatValue;
+	g_fReduceGrenade = g_cvReduceGrenade.FloatValue;
+}
+
 public void OnConVarChanged(ConVar convar, const char[] oldValue, const char[] newValue) {
 	if (convar == g_cvReduceKnife)
 		g_fReduceKnife = g_cvReduceKnife.FloatValue;
@@ -342,6 +347,38 @@ public void OnClientPutInServer(int client) {
 #endif
 
 public void OnClientPostAdminCheck(int client) {
+	if (IsFakeClient(client) || IsClientSourceTV(client)) {
+		g_bUserVerified[client] = true;
+		return;
+	}
+
+	bool bError = false;
+	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
+
+	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
+		// Can't get client data, restrict him by default.
+		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
+		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
+		strcopy(sName, sizeof(sName), "Unknown");
+		bError = true;
+		return;
+	}
+
+	// Initialize client data
+	g_bUserVerified[client] = false;
+	g_bIsClientRestricted[client] = false;
+	strcopy(g_sIPs[client], sizeof(g_sIPs[]), sIP);
+	strcopy(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
+	strcopy(g_sName[client], sizeof(g_sName[]), sName);
+
+	if (!bError) {
+		VerifyKbanClient(client);
+	}
+	else {
+		g_bUserVerified[client] = true;
+		Kban_AddBan(client, 0, -1, "Failed to get client data");
+	}
+
 	if (!g_cvDisplayConnectMsg.BoolValue)
 		return;
 
@@ -372,6 +409,10 @@ public Action Timer_AnnouncePlayer(Handle timer, int serial) {
 
 stock void VerifyKbanClient(int client) {
 	if (g_bUserVerified[client] || !IsDBConnected()) {
+		return;
+	}
+	
+	if (g_sSteamIDs[client][0] != 'S') {
 		return;
 	}
 	
@@ -516,15 +557,17 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 		ChangeWeaponsKnockback(client, true);
 		#endif
 		
-		KbanType type = Kban_GetClientKbanType(client);
-		if(type != KBAN_TYPE_NOTKBANNED) {
-			return;
-		}
-
+		// Fix: Add the player to g_allKbans immediately when kbanned
+		// Remove the redundant type check that was preventing proper synchronization
 		g_allKbans.PushArray(tempInfo, sizeof(tempInfo));
 	} else {
 		g_bIsClientRestricted[client] = false;
-
+		
+		#if defined _zr_included
+		ChangeWeaponsKnockback(client, false);
+		#endif
+		
+		// Fix: Check if player was previously restricted and remove from g_allKbans
 		KbanType type = Kban_GetClientKbanType(client);
 		if(type == KBAN_TYPE_NOTKBANNED) {
 			return;
@@ -567,37 +610,6 @@ public Action Event_OnPlayerName(Event event, const char[] name, bool dontBroadc
 	}
 	
 	return Plugin_Continue;
-}
-
-public void OnClientConnected(int client) {
-	bool bError = false;
-	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
-	// Can't get client data, restrict him by default.
-	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
-		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
-		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
-		strcopy(sName, sizeof(sName), "Unknown");
-		bError = true;
-	}
-
-	// Initialize client data
-	g_bUserVerified[client] = false;
-	g_bIsClientRestricted[client] = false;
-	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), sIP);
-	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
-	FormatEx(g_sName[client], sizeof(g_sName[]), sName);
-
-	if(bError || IsIPBanned(g_sIPs[client])) {
-		g_bIsClientRestricted[client] = true;
-		#if defined _zr_included
-		ChangeWeaponsKnockback(client, true);
-		#endif
-	}
-
-	// Avoid useless queries
-	if (IsFakeClient(client) || IsClientSourceTV(client)) {
-		g_bUserVerified[client] = true;
-	}
 }
 
 public void OnClientDisconnect(int client) {
@@ -693,19 +705,11 @@ Action CheckAllKbans_Timer(Handle timer) {
 
 	int iCurrentTimeStamp = GetTime();
 
-	// Player was not verified yet, force the verification
 	for(int i = 1; i <= MaxClients; i++) {
-		if(!IsClientInGame(i))
+		// Skip if not verified
+		if (!g_bUserVerified[i])
 			continue;
-
-		if (IsFakeClient(i) || IsClientSourceTV(i))
-			continue;
-
-		if (!g_bUserVerified[i]) {
-			VerifyKbanClient(i);
-			continue;
-		}
-
+			
 		// Skip if not restricted
 		if (!g_bIsClientRestricted[i])
 			continue;
