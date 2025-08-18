@@ -301,6 +301,9 @@ public void OnMapStart() {
 
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+	
+	/* This is to make temporary kbans expire */
+	CreateTimer(15.0, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnConfigsExecuted() {
@@ -734,6 +737,23 @@ Action CheckAllKbans_Timer(Handle timer) {
 	}
 
 	return Plugin_Continue;
+}
+
+void CheckTempKbans_Timer(Handle timer) {
+	if (!IsDBConnected()) {
+		return;
+	}
+
+	char query[MAX_QUERIE_LENGTH];
+	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
+	g_hDB.Query(OnCheckTempKbans, query);
+}
+
+void OnCheckTempKbans(Database db, DBResultSet results, const char[] error, any data) {
+	if(!IsDBConnected() || results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_UPDATE, error);
+		return;
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -1290,9 +1310,6 @@ void DB_CreateTables() {
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
 
-	T_Tables.AddQuery(query);
-
-	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
 	T_Tables.AddQuery(query);
 
 	g_hDB.Execute(T_Tables, OnCreateTablesSuccess, OnCreateTablesError);
