@@ -746,14 +746,17 @@ Action CheckAllKbans_Timer(Handle timer) {
 Action CheckTempKbans_Timer(Handle timer) {
 	static int retries;
 	if (!IsDBConnected()) {
-		if (retries < 3) {
-			CreateCheckTempKbansTimer();
+		if (retries >= 3) {
+			retries = 0;
 			return Plugin_Stop;
 		}
 		
 		retries++;
+		CreateCheckTempKbansTimer();
 		return Plugin_Stop;
 	}
+	
+	retries = 0;
 	
 	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
