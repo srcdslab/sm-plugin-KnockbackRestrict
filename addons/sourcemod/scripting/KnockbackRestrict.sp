@@ -55,7 +55,8 @@ ArrayList g_OfflinePlayers;
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
 	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
-	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
+	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade,
+	g_cvRemoveTempInterval;
 
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -140,6 +141,7 @@ public void OnPluginStart() {
 	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
+	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Interval time (in seconds) after map start to make all temp kbans expire", _, true, 0.0, true, 120.0);
 	
 	/* Get Reduce Cvars */
 	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
@@ -151,7 +153,7 @@ public void OnPluginStart() {
 	g_cvReduceSniper			= CreateConVar("sm_kbrestrict_reduce_sniper", "0.80", "Reduce knockback for snipers", _, true, 0.0, true, 1.0);
 	g_cvReduceSemiAutoSniper	= CreateConVar("sm_kbrestrict_reduce_semiautosniper", "0.70", "Reduce knockback for semi-auto snipers", _, true, 0.0, true, 1.0);
 	g_cvReduceGrenade			= CreateConVar("sm_kbrestrict_reduce_grenade", "0.95", "Reduce knockback for grenades", _, true, 0.0, true, 1.0);
-
+	
 	// Hook CVARs
 	g_cvReduceKnife.AddChangeHook(OnConVarChanged);
 	g_cvReduceKnifeMod.AddChangeHook(OnConVarChanged);
@@ -307,7 +309,7 @@ public void OnMapStart() {
 }
 
 void CreateCheckTempKbansTimer() {
-	CreateTimer(45.0, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
+	CreateTimer(g_cvRemoveTempInterval.FloatValue, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnConfigsExecuted() {
