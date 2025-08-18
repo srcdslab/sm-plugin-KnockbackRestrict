@@ -303,7 +303,11 @@ public void OnMapStart() {
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	
 	/* This is to make temporary kbans expire */
-	CreateTimer(15.0, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
+	CreateCheckTempKbansTimer();
+}
+
+void CreateCheckTempKbansTimer() {
+	CreateTimer(45.0, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnConfigsExecuted() {
@@ -739,14 +743,22 @@ Action CheckAllKbans_Timer(Handle timer) {
 	return Plugin_Continue;
 }
 
-void CheckTempKbans_Timer(Handle timer) {
+Action CheckTempKbans_Timer(Handle timer) {
+	static int retries;
 	if (!IsDBConnected()) {
-		return;
+		if (retries < 3) {
+			CreateCheckTempKbansTimer();
+			return Plugin_Stop;
+		}
+		
+		retries++;
+		return Plugin_Stop;
 	}
-
+	
 	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
 	g_hDB.Query(OnCheckTempKbans, query);
+	return Plugin_Stop;
 }
 
 void OnCheckTempKbans(Database db, DBResultSet results, const char[] error, any data) {
