@@ -30,7 +30,8 @@ TopMenu g_hAdminMenu;
 
 int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
-	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
+	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... },
+	g_iMapStartTime;
 	
 bool g_bKnifeModeEnabled,
 	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
@@ -141,7 +142,7 @@ public void OnPluginStart() {
 	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
-	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Delay (in seconds) after map start before expiring all temporary kbans (one-time, not recurring)", _, true, 0.0, true, 120.0);
+	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Interval time (in seconds) after map start to make all temp kbans expire", _, true, 0.0, true, 120.0);
 	
 	/* Get Reduce Cvars */
 	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
@@ -300,7 +301,10 @@ public void OnMapStart() {
 
 	/* MAP NAME */
 	GetCurrentMap(g_sMapName, sizeof(g_sMapName));
-
+	
+	/* Get Map Start Timestamp */
+	g_iMapStartTime = GetTime();
+	
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	
@@ -761,7 +765,7 @@ Action CheckTempKbans_Timer(Handle timer) {
 	retries = 0;
 	
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
+	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `time_stamp_start` < %d AND `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;", g_iMapStartTime);
 	g_hDB.Query(OnCheckTempKbans, query);
 	return Plugin_Stop;
 }
