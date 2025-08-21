@@ -30,8 +30,7 @@ TopMenu g_hAdminMenu;
 
 int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
-	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... },
-	g_iMapStartTime;
+	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
 	
 bool g_bKnifeModeEnabled,
 	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
@@ -302,18 +301,15 @@ public void OnMapStart() {
 	/* MAP NAME */
 	GetCurrentMap(g_sMapName, sizeof(g_sMapName));
 	
-	/* Get Map Start Timestamp */
-	g_iMapStartTime = GetTime();
-	
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 	
 	/* This is to make temporary kbans expire */
-	CreateCheckTempKbansTimer();
+	CreateCheckTempKbansTimer(GetTime());
 }
 
-void CreateCheckTempKbansTimer() {
-	CreateTimer(g_cvRemoveTempInterval.FloatValue, CheckTempKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE);
+void CreateCheckTempKbansTimer(int mapStartTime) {
+	CreateTimer(g_cvRemoveTempInterval.FloatValue, CheckTempKbans_Timer, mapStartTime, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnConfigsExecuted() {
@@ -749,7 +745,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 	return Plugin_Continue;
 }
 
-Action CheckTempKbans_Timer(Handle timer) {
+Action CheckTempKbans_Timer(Handle timer, int mapStartTime) {
 	static int retries;
 	if (!IsDBConnected()) {
 		if (retries >= 3) {
@@ -758,14 +754,14 @@ Action CheckTempKbans_Timer(Handle timer) {
 		}
 		
 		retries++;
-		CreateCheckTempKbansTimer();
+		CreateCheckTempKbansTimer(mapStartTime);
 		return Plugin_Stop;
 	}
 	
 	retries = 0;
 	
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `time_stamp_start` < %d AND `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;", g_iMapStartTime);
+	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `time_stamp_start` < %d AND `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;", mapStartTime);
 	g_hDB.Query(OnCheckTempKbans, query);
 	return Plugin_Stop;
 }
