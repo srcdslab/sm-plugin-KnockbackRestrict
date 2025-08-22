@@ -31,7 +31,7 @@ TopMenu g_hAdminMenu;
 int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
 	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
-	
+
 bool g_bKnifeModeEnabled,
 	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
 	g_bIsClientRestricted[MAXPLAYERS + 1] = { false, ... },
@@ -55,7 +55,8 @@ ArrayList g_OfflinePlayers;
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
 	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
-	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade;
+	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade,
+	g_cvRemoveTempInterval;
 
 enum KbanGetType {
 	KBAN_GET_TYPE_ID = 0,
@@ -140,7 +141,8 @@ public void OnPluginStart() {
 	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
 	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
-	
+	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Interval time (in seconds) after map start to make all temp kbans expire", _, true, 0.0, true, 120.0);
+
 	/* Get Reduce Cvars */
 	g_cvReduceKnife				= CreateConVar("sm_kbrestrict_reduce_knife", "0.98", "Reduce knockback for knife", _, true, 0.0, true, 1.0);
 	g_cvReduceKnifeMod			= CreateConVar("sm_kbrestrict_reduce_knife_mod", "0.83", "Reduce knockback for knife in knife mode", _, true, 0.0, true, 1.0);
@@ -162,7 +164,7 @@ public void OnPluginStart() {
 	g_cvReduceSniper.AddChangeHook(OnConVarChanged);
 	g_cvReduceSemiAutoSniper.AddChangeHook(OnConVarChanged);
 	g_cvReduceGrenade.AddChangeHook(OnConVarChanged);
-	
+
 	// Initialize values
 	UpdateReduceValues();
 
@@ -182,7 +184,7 @@ public void OnPluginStart() {
 
 	/* Prefix */
 	CSetPrefix(KR_Tag);
-	
+
 	/* Incase of a late load */
 	if(g_bLate) {
 		for(int i = 1; i <= MaxClients; i++) {
@@ -193,7 +195,7 @@ public void OnPluginStart() {
 			if(IsFakeClient(i) || IsClientSourceTV(i)) {
 				continue;
 			}
-			
+
 			#if !defined _zr_included
 			OnClientPutInServer(i);
 			#endif
@@ -206,7 +208,7 @@ public void OnPluginStart() {
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	g_bLate = late;
-	
+
 	RegPluginLibrary("KnockbackRestrict");
 
 	CreateNative("KR_BanClient", Native_KR_BanClient);
@@ -214,7 +216,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("KR_ClientStatus", Native_KR_ClientStatus);
 	CreateNative("KR_GetClientKbansNumber", Native_KR_GetClientKbansNumber);
 	CreateNative("KR_DisplayLengthsMenu", Native_KR_DisplayLengthsMenu);
-	
+
 	/* Forward */
 	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
@@ -301,6 +303,13 @@ public void OnMapStart() {
 
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+
+	/* This is to make temporary kbans expire */
+	CreateCheckTempKbansTimer(GetTime());
+}
+
+void CreateCheckTempKbansTimer(int mapStartTime) {
+	CreateTimer(g_cvRemoveTempInterval.FloatValue, CheckTempKbans_Timer, mapStartTime, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void OnConfigsExecuted() {
@@ -411,36 +420,36 @@ stock void VerifyKbanClient(int client) {
 	if (g_bUserVerified[client] || !IsDBConnected()) {
 		return;
 	}
-	
+
 	if (g_sSteamIDs[client][0] != 'S') {
 		return;
 	}
-	
+
 	char queryEx[MAX_QUERIE_LENGTH];
 
 	if (!g_cvGetRealKbanNumber.BoolValue) {
-		g_hDB.Format(queryEx, sizeof(queryEx), 
+		g_hDB.Format(queryEx, sizeof(queryEx),
 			"SELECT t.*, \
 			(SELECT COUNT(*) FROM `KbRestrict_CurrentBans` WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_removed`=0) as kban_count, \
 			(SELECT id FROM `KbRestrict_CurrentBans` WHERE `client_ip`='%s' AND `client_steamid`='%s' AND `is_expired`=0 AND `is_removed`=0 LIMIT 1) as pending_steamid_id \
 			FROM (SELECT id, client_name, client_steamid, client_ip, admin_name, admin_steamid, reason, map, length, time_stamp_start, time_stamp_end, is_expired, is_removed \
 			FROM `KbRestrict_CurrentBans` USE INDEX (`idx_steamid_ip_status`) \
 			WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_expired`=0 AND `is_removed`=0 \
-			ORDER BY time_stamp_start DESC LIMIT 1) as t", 
-			g_sSteamIDs[client], g_sIPs[client], 
-			g_sIPs[client], NOSTEAMID, 
+			ORDER BY time_stamp_start DESC LIMIT 1) as t",
+			g_sSteamIDs[client], g_sIPs[client],
+			g_sIPs[client], NOSTEAMID,
 			g_sSteamIDs[client], g_sIPs[client]);
 	} else {
-		g_hDB.Format(queryEx, sizeof(queryEx), 
+		g_hDB.Format(queryEx, sizeof(queryEx),
 			"SELECT t.*, \
 			(SELECT COUNT(*) FROM `KbRestrict_CurrentBans` WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_removed`=0) as kban_count, \
 			(SELECT id FROM `KbRestrict_CurrentBans` WHERE `client_ip`='%s' AND `client_steamid`='%s' AND `is_expired`=0 AND `is_removed`=0 LIMIT 1) as pending_steamid_id \
 			FROM (SELECT id, client_name, client_steamid, client_ip, admin_name, admin_steamid, reason, map, length, time_stamp_start, time_stamp_end, is_expired, is_removed \
 			FROM `KbRestrict_CurrentBans` USE INDEX (`idx_steamid_ip_status`) \
 			WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_expired`=0 \
-			ORDER BY time_stamp_start DESC LIMIT 1) as t", 
-			g_sSteamIDs[client], g_sIPs[client], 
-			g_sIPs[client], NOSTEAMID, 
+			ORDER BY time_stamp_start DESC LIMIT 1) as t",
+			g_sSteamIDs[client], g_sIPs[client],
+			g_sIPs[client], NOSTEAMID,
 			g_sSteamIDs[client], g_sIPs[client]);
 	}
 	g_hDB.Query(OnPostVerifyKban, queryEx, GetClientUserId(client));
@@ -479,7 +488,7 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 		if (!isExpired && !isRemoved) {
 			// Time validation only if kban is not expired
 			bool isTimeValid = false;
-			
+
 			if (info.time_stamp_end == 0) { // Permanent kban
 				isTimeValid = true;
 			} else if (info.time_stamp_end > 0) { // Temporary kban
@@ -493,7 +502,7 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 				// Additional check for IP-based kbans
 				if (strcmp(info.clientIP, g_sIPs[client], false) == 0) {
 					// If kban is by IP, verify that steamid is not already kbanned
-					if (strcmp(info.clientSteamID, NOSTEAMID, false) == 0 || 
+					if (strcmp(info.clientSteamID, NOSTEAMID, false) == 0 ||
 						strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0) {
 						isKbanned = true;
 						tempInfo = info;
@@ -531,10 +540,10 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 	// Handle the case where there is a ban with this IP but without SteamID
 	if (pendingSteamIDId > 0) {
 		char query[MAX_QUERIE_LENGTH];
-		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d", 
+		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d",
 			g_sSteamIDs[client], pendingSteamIDId);
 		g_hDB.Query(OnKbanAdded, query);
-		
+
 		// Also update in g_allKbans
 		for(int i = 0; i < g_allKbans.Length; i++) {
 			Kban info;
@@ -549,29 +558,29 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 
 	g_bUserVerified[client] = true;
 	g_iClientKbansNumber[client] = kbanCount;
-	
+
 	if(isKbanned) {
 		g_bIsClientRestricted[client] = true;
-		
+
 		#if defined _zr_included
 		ChangeWeaponsKnockback(client, true);
 		#endif
-		
+
 		// Fix: Add the player to g_allKbans immediately when kbanned
 		// Remove the redundant type check that was preventing proper synchronization
 		g_allKbans.PushArray(tempInfo, sizeof(tempInfo));
 	} else {
 		g_bIsClientRestricted[client] = false;
-		
+
 		#if defined _zr_included
 		ChangeWeaponsKnockback(client, false);
 		#endif
-		
+
 		// Fix: Check if player was previously restricted and remove from g_allKbans
 		KbanType type = Kban_GetClientKbanType(client);
 		if(type == KBAN_TYPE_NOTKBANNED) {
 			return;
-		} 
+		}
 
 		Kban kbanInfo;
 		if(type == KBAN_TYPE_IP) {
@@ -608,7 +617,7 @@ public Action Event_OnPlayerName(Event event, const char[] name, bool dontBroadc
 	if (client && !IsFakeClient(client)) {
 		event.GetString("newname", g_sName[client], sizeof(g_sName[]));
 	}
-	
+
 	return Plugin_Continue;
 }
 
@@ -690,7 +699,7 @@ public Action OnTakeDamage(int victim, int &attacker, int &inflictor, float &dam
 	/* Semi-Auto Snipers */
 	if ((strcmp(sWeapon, "weapon_sg550", false) == 0) || (strcmp(sWeapon, "weapon_g3sg1", false) == 0))
 		damage -= (damage * g_fReduceSemiAutoSniper);
-	
+
 	/* Grenades */
 	if (strcmp(sWeapon, "weapon_hegrenade", false) == 0)
 		damage -= (damage * g_fReduceGrenade);
@@ -709,7 +718,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 		// Skip if not verified
 		if (!g_bUserVerified[i])
 			continue;
-			
+
 		// Skip if not restricted
 		if (!g_bIsClientRestricted[i])
 			continue;
@@ -734,6 +743,34 @@ Action CheckAllKbans_Timer(Handle timer) {
 	}
 
 	return Plugin_Continue;
+}
+
+Action CheckTempKbans_Timer(Handle timer, int mapStartTime) {
+	static int retries;
+	if (!IsDBConnected()) {
+		if (retries >= 3) {
+			retries = 0;
+			return Plugin_Stop;
+		}
+
+		retries++;
+		CreateCheckTempKbansTimer(mapStartTime);
+		return Plugin_Stop;
+	}
+
+	retries = 0;
+
+	char query[MAX_QUERIE_LENGTH];
+	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `time_stamp_start` < %d AND `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;", mapStartTime);
+	g_hDB.Query(OnCheckTempKbans, query);
+	return Plugin_Stop;
+}
+
+void OnCheckTempKbans(Database db, DBResultSet results, const char[] error, any data) {
+	if(!IsDBConnected() || results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_UPDATE, error);
+		return;
+	}
 }
 
 //----------------------------------------------------------------------------------------------------
@@ -799,14 +836,14 @@ Action Command_KbRestrict(int client, int args) {
 		if(time == 0) {
 			time = g_cvDefaultLength.IntValue;
 		}
-		
+
 		/* Check Admin Access */
 		time = Kban_CheckKbanAdminAccess(client, time);
 	}
 
 	StripQuotes(reason);
 	if(!reason[0] || strlen(reason) <= 3) {
-		if(client >= 1) {	
+		if(client >= 1) {
 			g_iClientTarget[client] = GetClientUserId(target);
 			g_iClientTargetLength[client] = time;
 			DisplayReasons_Menu(client);
@@ -921,7 +958,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 
 	char reason[REASON_MAX_LENGTH];
 	FormatEx(reason, sizeof(reason), Arguments[len]);
-	
+
 	/* Check if admin has access to perma ban or a long ban */
 	if(client > 0 && !CheckCommandAccess(client, "sm_admin", ADMFLAG_ROOT, true)) {
 		if(time == 0) {
@@ -949,7 +986,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 
 	OfflinePlayer player;
 	g_OfflinePlayers.GetArray(arrayIndex, player, sizeof(player));
-	
+
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban info;
 		g_allKbans.GetArray(i, info, sizeof(info));
@@ -958,7 +995,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 			return Plugin_Handled;
 		}
 	}
-	
+
 	Kban_AddOfflineBan(player, client, time, reason);
 	return Plugin_Handled;
 }
@@ -995,7 +1032,7 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 
 	// Edit ID purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
-	
+
 	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1];
 	if(!g_hDB.Escape(adminName, escapedAdminName, sizeof(escapedAdminName))
 		|| !g_hDB.Escape(player.name, escapedTargetName, sizeof(escapedTargetName))
@@ -1018,7 +1055,7 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 										info.map, info.length, info.time_stamp_start,
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
-										
+
 	g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	PublishKban(info, admin, _, reason);
@@ -1275,7 +1312,7 @@ void DB_CreateTables() {
 										PRIMARY KEY(`id`)) CHARACTER SET %s COLLATE %s;",
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
-		
+
 	T_Tables.AddQuery(query);
 
 	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_weblogs` ( \
@@ -1290,9 +1327,6 @@ void DB_CreateTables() {
 										MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, MAX_NAME_LENGTH, MAX_AUTHID_LENGTH, DB_CHARSET, DB_COLLATION
 	);
 
-	T_Tables.AddQuery(query);
-
-	g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired` = 1 WHERE `length` = -1 AND `is_expired` = 0 AND `is_removed` = 0;");
 	T_Tables.AddQuery(query);
 
 	g_hDB.Execute(T_Tables, OnCreateTablesSuccess, OnCreateTablesError);
@@ -1355,7 +1389,7 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 	} else {
 		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1 WHERE `id`=%d", info.id);
 	}
-	
+
 	g_hDB.Query(OnKbanRemove, query);
 
 	for(int i = 0; i < g_allKbans.Length; i++) {
@@ -1371,7 +1405,7 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 	#if defined _zr_included
 	ChangeWeaponsKnockback(target, false);
 	#endif
-	
+
 	Kban_PublishKunban(target, admin, reason);
 
 	Call_StartForward(g_hKunbanForward);
@@ -1426,7 +1460,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	if (g_bIsClientRestricted[target]) {
 		return;
 	}
-	
+
 	Kban info;
 	if(length < 0) {
 		length = -1;
@@ -1470,7 +1504,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
 	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1];
-	
+
 	if(!g_hDB.Escape(info.clientName, escapedTargetName, sizeof(escapedTargetName))
 		|| !g_hDB.Escape(info.adminName, escapedAdminName, sizeof(escapedAdminName))
 		|| !g_hDB.Escape(info.reason, escapedReason, sizeof(escapedReason))) {
@@ -1502,7 +1536,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	#if defined _zr_included
 	ChangeWeaponsKnockback(target, true);
 	#endif
-	
+
 	g_iClientKbansNumber[target]++;
 
 	PublishKban(info, admin, target, reason);
