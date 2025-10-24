@@ -1214,7 +1214,7 @@ void DB_OnConnect(Database db, const char[] error, any data)
 		if (!g_bConnectingToDB)
 		{
 			g_bConnectingToDB = true;
-			CreateTimer(15.0, DB_RetryConnection);
+			CreateTimer(15.0, DB_RetryConnection, _, TIMER_FLAG_NO_MAPCHANGE);
 			LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
 		}
 
