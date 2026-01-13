@@ -1120,21 +1120,21 @@ Action Command_CheckKbStatus(int client, int args) {
 
 	switch(info.length) {
 		case 0: {
-			CReplyToCommand(target, "%t", "PlayerRestrictedPerma", g_sName[target]);
+			CReplyToCommand(client, "%t", "PlayerRestrictedPerma", g_sName[target]);
 		}
 
 		case -1: {
-			CReplyToCommand(target, "%t", "PlayerRestrcitedTemp", g_sName[target]);
+			CReplyToCommand(client, "%t", "PlayerRestrcitedTemp", g_sName[target]);
 		}
 
 		default: {
 			char sTimeLeft[32];
 			CheckPlayerExpireTime(info.time_stamp_end - GetTime(), sTimeLeft, sizeof(sTimeLeft));
-			CReplyToCommand(target, "%t", "RestrictTimeLeft", g_sName[target], sTimeLeft);
+			CReplyToCommand(client, "%t", "RestrictTimeLeft", g_sName[target], sTimeLeft);
 		}
 	}
 
-	CReplyToCommand(target, "{white}%t", "Reason", info.reason);
+	CReplyToCommand(client, "{white}%t", "Reason", info.reason);
 
 	return Plugin_Handled;
 }
