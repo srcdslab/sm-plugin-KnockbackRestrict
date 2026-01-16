@@ -530,7 +530,7 @@ int Menu_KbanInfoMenu(Menu menu, MenuAction action, int param1, int param2) {
 }
 
 stock void AddLength(Menu menu, int time, const char[] sUnitSingle, const char[] sUnitPlural, int maxTime) {
-	if (time >= maxTime)
+	if (maxTime == 0 || time <= maxTime)
 	{
 		char buffer[32], sDuration[64];
 		IntToString(time, buffer, sizeof(buffer));
