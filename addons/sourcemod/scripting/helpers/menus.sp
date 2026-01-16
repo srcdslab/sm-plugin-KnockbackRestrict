@@ -576,12 +576,12 @@ void DisplayLengths_Menu(int client) {
 	AddLength(menu, 1440, "Day", "Days", iMaxTime);
 	AddLength(menu, 2880, "Day", "Days", iMaxTime);
 	AddLength(menu, 4320, "Day", "Days", iMaxTime);
-	AddLength(menu, 10080, "Day", "Days", iMaxTime);
 
+	AddLength(menu, 10080, "Week", "Weeks", iMaxTime);
 	AddLength(menu, 20160, "Week", "Weeks", iMaxTime);
 	AddLength(menu, 30240, "Week", "Weeks", iMaxTime);
-	AddLength(menu, 40320, "Week", "Weeks", iMaxTime);
 
+	AddLength(menu, 40320, "Month", "Months", iMaxTime);
 	AddLength(menu, 80640, "Month", "Months", iMaxTime);
 	AddLength(menu, 120960, "Month", "Months", iMaxTime);
 	AddLength(menu, 161280, "Month", "Months", iMaxTime);
