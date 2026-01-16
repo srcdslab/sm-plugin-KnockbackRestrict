@@ -565,19 +565,27 @@ void DisplayLengths_Menu(int client) {
 	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
 	menu.AddItem("-1", sBuffer);
 
-	for (int i = 15; i < 241920; i++) {
-		if (i == 15 || i == 30 || i == 45) {
-			AddLength(menu, i, "Minute", "Minutes", iMaxTime);
-		} else if (i == 60 || i == 120 || i == 240 || i == 480 || i == 720) {
-			AddLength(menu, i, "Hour", "Hours", iMaxTime);
-		} else if (i == 1440 || i == 2880 || i == 4320 || i == 5760 || i == 7200 || i == 8640) {
-			AddLength(menu, i, "Day", "Days", iMaxTime);
-		} else if (i == 10080 || i == 20160 || i == 30240) {
-			AddLength(menu, i, "Week", "Weeks", iMaxTime);
-		} else if (i == 40320 || i == 80640 || i == 120960 || i == 241920) {
-			AddLength(menu, i, "Month", "Months", iMaxTime);
-		}
-	}
+	AddLength(menu, 30, "Minute", "Minutes", iMaxTime);
+
+	AddLength(menu, 60, "Hour", "Hours", iMaxTime);
+	AddLength(menu, 120, "Hour", "Hours", iMaxTime);
+	AddLength(menu, 240, "Hour", "Hours", iMaxTime);
+	AddLength(menu, 480, "Hour", "Hours", iMaxTime);
+	AddLength(menu, 720, "Hour", "Hours", iMaxTime);
+
+	AddLength(menu, 1440, "Day", "Days", iMaxTime);
+	AddLength(menu, 2880, "Day", "Days", iMaxTime);
+	AddLength(menu, 4320, "Day", "Days", iMaxTime);
+
+	AddLength(menu, 10080, "Week", "Weeks", iMaxTime);
+	AddLength(menu, 20160, "Week", "Weeks", iMaxTime);
+	AddLength(menu, 30240, "Week", "Weeks", iMaxTime);
+
+	AddLength(menu, 40320, "Month", "Months", iMaxTime);
+	AddLength(menu, 80640, "Month", "Months", iMaxTime);
+	AddLength(menu, 120960, "Month", "Months", iMaxTime);
+	AddLength(menu, 161280, "Month", "Months", iMaxTime);
+	AddLength(menu, 241920, "Month", "Months", iMaxTime);
 
 	menu.Display(client, MENU_TIME_FOREVER);
 }
