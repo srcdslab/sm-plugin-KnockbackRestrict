@@ -510,16 +510,21 @@ int Menu_KbanInfoMenu(Menu menu, MenuAction action, int param1, int param2) {
 			if(target != -1) {
 				Kban_RemoveBan(target, param1, sReason);
 			} else {
-				char escapedName[MAX_NAME_LENGTH * 2 + 1];
-				if(!g_hDB.Escape(g_sName[param1], escapedName, sizeof(escapedName))) {
+				char escapedName[MAX_NAME_LENGTH * 2 + 1], escapedAdminSteamID[MAX_AUTHID_LENGTH * 2 + 1], escapedReason[128], escapedSteamID[MAX_AUTHID_LENGTH * 2 + 1], escapedIP[MAX_IP_LENGTH * 2 + 1];
+				if(!g_hDB.Escape(g_sName[param1], escapedName, sizeof(escapedName))
+					|| !g_hDB.Escape(g_sSteamIDs[param1], escapedAdminSteamID, sizeof(escapedAdminSteamID))
+					|| !g_hDB.Escape(sReason, escapedReason, sizeof(escapedReason))
+					|| !g_hDB.Escape(buffers[0], escapedSteamID, sizeof(escapedSteamID))
+					|| !g_hDB.Escape(buffers[1], escapedIP, sizeof(escapedIP))) {
 					return 0;
 				}
 
 				char query[MAX_QUERIE_LENGTH];
 				g_hDB.Format(query, sizeof(query),  "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
-												... "`admin_name_removed`='%s', `admin_steamid_removed`='%s', `reason_removed`,"
-												... "`time_stamp_removed`=%d",
-													escapedName, g_sSteamIDs[param1], sReason, GetTime());
+												... "`admin_name_removed`='%s', `admin_steamid_removed`='%s', `reason_removed`='%s',"
+												... "`time_stamp_removed`=%d WHERE `client_steamid`='%s' AND `client_ip`='%s' AND `is_expired`=0 AND `is_removed`=0",
+													escapedName, escapedAdminSteamID, escapedReason,
+													GetTime(), escapedSteamID, escapedIP);
 
 				g_hDB.Query(OnKbanRemove, query);
 			}
