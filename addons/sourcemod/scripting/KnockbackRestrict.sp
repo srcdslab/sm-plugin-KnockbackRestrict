@@ -522,7 +522,10 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 					/* Check if IP is not known */
 					if(strcmp(tempInfo.clientIP, "Unknown", false) == 0) {
 						/* Update IP in DB */
-						char query[MAX_QUERIE_LENGTH];
+						char query[MAX_QUERIE_LENGTH], escapedIP[MAX_IP_LENGTH * 2 + 1];
+						if(!g_hDB.Escape(g_sIPs[client], escapedIP, sizeof(escapedIP))) {
+							return;
+						}
 						g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_ip`='%s' WHERE `id`=%d", escapedIP, tempInfo.id);
 						g_hDB.Query(OnUpdateClientIP, query);
 
