@@ -547,7 +547,10 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 
 	// Handle the case where there is a ban with this IP but without SteamID
 	if (pendingSteamIDId > 0) {
-		char query[MAX_QUERIE_LENGTH];
+		char query[MAX_QUERIE_LENGTH], escapedSteamID[MAX_AUTHID_LENGTH * 2 + 1];
+		if(!g_hDB.Escape(g_sSteamIDs[client], escapedSteamID, sizeof(escapedSteamID))) {
+			return;
+		}
 		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d",
 			escapedSteamID, pendingSteamIDId);
 		g_hDB.Query(OnKbanAdded, query);
