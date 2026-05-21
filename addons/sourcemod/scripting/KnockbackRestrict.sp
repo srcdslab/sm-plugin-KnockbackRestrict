@@ -1033,12 +1033,11 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 	// Edit ID purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
-	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1], escapedMap[PLATFORM_MAX_PATH * 2 + 1], escapedAdminSteamID[MAX_AUTHID_LENGTH * 2 + 1];
+	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1], escapedMap[PLATFORM_MAX_PATH * 2 + 1];
 	if(!g_hDB.Escape(adminName, escapedAdminName, sizeof(escapedAdminName))
 		|| !g_hDB.Escape(player.name, escapedTargetName, sizeof(escapedTargetName))
 		|| !g_hDB.Escape(reason, escapedReason, sizeof(escapedReason))
-		|| !g_hDB.Escape(info.map, escapedMap, sizeof(escapedMap))
-		|| !g_hDB.Escape(info.adminSteamID, escapedAdminSteamID, sizeof(escapedAdminSteamID))) {
+		|| !g_hDB.Escape(info.map, escapedMap, sizeof(escapedMap))) {
 		return;
 	}
 
@@ -1053,7 +1052,7 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 										... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
 										... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
 										escapedTargetName, info.clientSteamID, info.clientIP,
-										escapedAdminName, escapedAdminSteamID, escapedReason,
+										escapedAdminName, info.adminSteamID, escapedReason,
 										escapedMap, info.length, info.time_stamp_start,
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
@@ -1505,13 +1504,12 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	// for editing id purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
-	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1], escapedMap[PLATFORM_MAX_PATH * 2 + 1], escapedAdminSteamID[MAX_AUTHID_LENGTH * 2 + 1];
+	char escapedTargetName[MAX_NAME_LENGTH * 2 + 1], escapedAdminName[MAX_NAME_LENGTH * 2 + 1], escapedReason[REASON_MAX_LENGTH * 2 + 1], escapedMap[PLATFORM_MAX_PATH * 2 + 1];
 
 	if(!g_hDB.Escape(info.clientName, escapedTargetName, sizeof(escapedTargetName))
 		|| !g_hDB.Escape(info.adminName, escapedAdminName, sizeof(escapedAdminName))
 		|| !g_hDB.Escape(info.reason, escapedReason, sizeof(escapedReason))
-		|| !g_hDB.Escape(info.map, escapedMap, sizeof(escapedMap))
-		|| !g_hDB.Escape(info.adminSteamID, escapedAdminSteamID, sizeof(escapedAdminSteamID))) {
+		|| !g_hDB.Escape(info.map, escapedMap, sizeof(escapedMap))) {
 		return;
 	}
 
@@ -1526,7 +1524,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 										... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
 										... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
 										escapedTargetName, info.clientSteamID, info.clientIP,
-										escapedAdminName, escapedAdminSteamID, escapedReason,
+										escapedAdminName, info.adminSteamID, escapedReason,
 										escapedMap, info.length, info.time_stamp_start,
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
@@ -1595,12 +1593,11 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		}
 	}
 
-	char targetNameEscaped[MAX_NAME_LENGTH * 2 + 1], adminNameEscaped[MAX_NAME_LENGTH * 2 + 1], reasonEscaped[REASON_MAX_LENGTH * 2 + 1], messageEscaped[REASON_MAX_LENGTH * 2 + 1], escapedAdminSteamID[MAX_AUTHID_LENGTH * 2 + 1];
+	char targetNameEscaped[MAX_NAME_LENGTH * 2 + 1], adminNameEscaped[MAX_NAME_LENGTH * 2 + 1], reasonEscaped[REASON_MAX_LENGTH * 2 + 1], messageEscaped[REASON_MAX_LENGTH * 2 + 1];
 	if(!g_hDB.Escape(info.clientName, targetNameEscaped, sizeof(targetNameEscaped))
 		|| !g_hDB.Escape(info.adminName, adminNameEscaped, sizeof(adminNameEscaped))
 		|| !g_hDB.Escape(reason, reasonEscaped, sizeof(reasonEscaped))
-		|| !g_hDB.Escape(message, messageEscaped, sizeof(messageEscaped))
-		|| !g_hDB.Escape(info.adminSteamID, escapedAdminSteamID, sizeof(escapedAdminSteamID))) {
+		|| !g_hDB.Escape(message, messageEscaped, sizeof(messageEscaped))) {
 			LogError("[Kb-Restrict] Couldn't escape the message.");
 			return;
 	}
@@ -1615,7 +1612,7 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 									... "`message`, `time_stamp`)"
 									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
 										targetNameEscaped, info.clientSteamID,
-										adminNameEscaped, escapedAdminSteamID,
+										adminNameEscaped, info.adminSteamID,
 										messageEscaped, GetTime());
 
 	g_hDB.Query(OnKbanPublished, query, arrayIndex);
