@@ -9,8 +9,8 @@ This repository contains **KnockbackRestrict**, a SourceMod plugin for Source en
 ## Technical Environment
 
 - **Language**: SourcePawn (SourceMod scripting language)
-- **Platform**: SourceMod 1.11+ (minimum version specified in sourceknight.yaml)
-- **Compiler**: SourcePawn compiler (spcomp) via SourceKnight build system
+- **Platform**: SourceMod 1.12+
+- **Compiler**: SourcePawn compiler (spcomp) via native GitHub Actions CI
 - **Database**: MySQL with UTF8MB4 charset and unicode collation
 - **Dependencies**: MultiColors, KnifeMode (optional), ZombieReloaded (optional)
 
@@ -27,7 +27,6 @@ This repository contains **KnockbackRestrict**, a SourceMod plugin for Source en
 │   └── translations/
 │       └── knockbackrestrict.phrases.txt # Translation file
 ├── .github/workflows/ci.yml              # CI/CD configuration
-├── sourceknight.yaml                     # Build configuration
 └── README.md                            # Documentation with migration scripts
 ```
 
@@ -50,20 +49,20 @@ This repository contains **KnockbackRestrict**, a SourceMod plugin for Source en
 
 ## Build System & Dependencies
 
-### SourceKnight Configuration
-The project uses **SourceKnight 0.2** for automated building:
+### GitHub Actions Configuration
+The project uses a native **GitHub Actions** workflow for automated building:
 
-```yaml
-# sourceknight.yaml defines:
-- SourceMod 1.11.0-git6934 (main dependency)
+```
+# .github/workflows/ci.yml defines:
+- SourceMod 1.12.x (via rumblefrog/setup-sp)
 - MultiColors (for colored chat messages)
 - KnifeMode (optional, for knife-specific features)  
 - ZombieReloaded (optional, for zombie mod integration)
 ```
 
 ### Building the Plugin
-1. **CI/CD**: GitHub Actions automatically builds on push/PR using `maxime1907/action-sourceknight@v1`
-2. **Local Building**: Use SourceKnight CLI: `sourceknight build`
+1. **CI/CD**: GitHub Actions automatically builds on push/PR by installing `spcomp` and the git dependencies directly
+2. **Local Building**: Install `spcomp` and the required includes, then run `spcomp -i include KnockbackRestrict.sp`
 3. **Output**: Compiled `.smx` files go to `/addons/sourcemod/plugins`
 
 ### Dependencies Management
@@ -233,7 +232,7 @@ When updating from older versions:
 ## Troubleshooting Common Issues
 
 ### Build Failures
-- **Missing dependencies**: Check sourceknight.yaml dependency versions
+- **Missing dependencies**: Check .github/workflows/ci.yml dependency versions
 - **Include errors**: Verify all required `.inc` files are accessible
 - **Syntax errors**: Follow SourcePawn conventions and pragmas
 
@@ -255,7 +254,7 @@ When updating from older versions:
 - **API interface**: `addons/sourcemod/scripting/include/KnockbackRestrict.inc`  
 - **Admin menus**: `addons/sourcemod/scripting/helpers/menus.sp`
 - **User messages**: `addons/sourcemod/translations/knockbackrestrict.phrases.txt`
-- **Build config**: `sourceknight.yaml`
+- **Build config**: `.github/workflows/ci.yml`
 
 ### Key Constants & Limits
 - `MAX_NAME_LENGTH`: Player name limit
@@ -266,10 +265,7 @@ When updating from older versions:
 
 ### Testing Commands
 ```bash
-# Build plugin locally (requires SourceKnight)
-sourceknight build
-
-# Check syntax without full build
+# Check syntax without full build (requires spcomp and includes locally)
 spcomp -i/path/to/includes KnockbackRestrict.sp
 
 # Database testing queries
