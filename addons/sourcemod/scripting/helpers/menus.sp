@@ -742,18 +742,11 @@ void Kban_OpenOfflineKbanMenu(int client, const char[] arg = "") {
 		if(IsSteamIDBanned(player.steamID) || IsIPBanned(player.ip)) {
 			continue;
 		}
-		
-		
-		if(arg[0]) {
-			if(StrContains(player.name, arg, false)) {
-				char menuBuffer[40];
-				FormatEx(menuBuffer, sizeof(menuBuffer), "%s |#%d", player.name, player.userid);
-				menu.AddItem(player.steamID, menuBuffer);
-				found = true;
-				continue;
-			}
+
+		if(arg[0] && StrContains(player.name, arg, false) == -1) {
+			continue;
 		}
-		
+
 		char menuBuffer[40];
 		FormatEx(menuBuffer, sizeof(menuBuffer), "%s |#%d", player.name, player.userid);
 		menu.AddItem(player.steamID, menuBuffer);
