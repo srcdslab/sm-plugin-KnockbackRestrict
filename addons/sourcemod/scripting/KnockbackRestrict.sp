@@ -233,6 +233,12 @@ int Native_KR_BanClient(Handle plugin, int params) {
 	int time = GetNativeCell(3);
 	GetNativeString(4, reason, sizeof(reason));
 
+	if(client < 1 || client > MaxClients || !IsClientInGame(client))
+		return 0;
+
+	if(admin < 0 || admin > MaxClients || (admin > 0 && !IsClientInGame(admin)))
+		admin = 0;
+
 	if(g_bIsClientRestricted[client])
 		return 0;
 
@@ -247,6 +253,12 @@ int Native_KR_UnBanClient(Handle plugin, int params) {
 	int client = GetNativeCell(2);
 	GetNativeString(3, reason, sizeof(reason));
 
+	if(client < 1 || client > MaxClients || !IsClientInGame(client))
+		return 0;
+
+	if(admin < 0 || admin > MaxClients || (admin > 0 && !IsClientInGame(admin)))
+		admin = 0;
+
 	if(!g_bIsClientRestricted[client])
 		return 0;
 
@@ -256,6 +268,9 @@ int Native_KR_UnBanClient(Handle plugin, int params) {
 
 int Native_KR_ClientStatus(Handle plugin, int params) {
 	int client = GetNativeCell(1);
+
+	if(client < 1 || client > MaxClients)
+		return 0;
 
 	return g_bIsClientRestricted[client];
 }
@@ -284,6 +299,8 @@ int Native_KR_DisplayLengthsMenu(Handle plugin, int params) {
 	}
 
 	g_iClientTarget[client] = GetClientUserId(target);
+
+	g_hLengthsMenuForward.RemoveAllFunctions(plugin);
 	g_hLengthsMenuForward.AddFunction(plugin, GetNativeFunction(3));
 	DisplayLengths_Menu(client);
 	return 1;
@@ -367,10 +384,11 @@ public void OnClientPostAdminCheck(int client) {
 	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
 		// Can't get client data, restrict him by default.
 		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
+		if (!sIP[0])
+			strcopy(sIP, sizeof(sIP), "Unknown");
 		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
 		strcopy(sName, sizeof(sName), "Unknown");
 		bError = true;
-		return;
 	}
 
 	// Initialize client data
@@ -1802,7 +1820,7 @@ void Kban_GiveSuccess(SuccessType type) {
 }
 
 bool IsValidClient(int client) {
-	return (1 <= client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
+	return (client >= 1 && client <= MaxClients && IsClientInGame(client) && !IsClientSourceTV(client));
 }
 
 #if defined _KnifeMode_Included
