@@ -236,7 +236,7 @@ int Native_KR_BanClient(Handle plugin, int params) {
 	if(client < 1 || client > MaxClients || !IsClientInGame(client))
 		return 0;
 
-	if(admin < 0 || admin > MaxClients)
+	if(admin < 0 || admin > MaxClients || (admin > 0 && !IsClientInGame(admin)))
 		admin = 0;
 
 	if(g_bIsClientRestricted[client])
@@ -256,7 +256,7 @@ int Native_KR_UnBanClient(Handle plugin, int params) {
 	if(client < 1 || client > MaxClients || !IsClientInGame(client))
 		return 0;
 
-	if(admin < 0 || admin > MaxClients)
+	if(admin < 0 || admin > MaxClients || (admin > 0 && !IsClientInGame(admin)))
 		admin = 0;
 
 	if(!g_bIsClientRestricted[client])
