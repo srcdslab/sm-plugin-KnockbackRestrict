@@ -299,8 +299,7 @@ int Native_KR_DisplayLengthsMenu(Handle plugin, int params) {
 	}
 
 	g_iClientTarget[client] = GetClientUserId(target);
-	// Drop any previous callback registered by this plugin so the forward's
-	// call list doesn't grow every time the menu is opened.
+
 	g_hLengthsMenuForward.RemoveAllFunctions(plugin);
 	g_hLengthsMenuForward.AddFunction(plugin, GetNativeFunction(3));
 	DisplayLengths_Menu(client);
