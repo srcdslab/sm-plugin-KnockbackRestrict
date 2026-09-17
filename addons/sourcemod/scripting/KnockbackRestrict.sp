@@ -320,10 +320,7 @@ public void OnMapStart() {
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 
-	/* Close out any legacy length=-1 rows written before -1/"Session" kbans were
-	   removed as a live restriction; new rows are now inserted already expired,
-	   so this is only relevant to pre-existing data. Safe to remove once no
-	   such legacy rows remain. */
+	/* Close out legacy length=-1 rows from before Session kbans were removed */
 	CreateCheckTempKbansTimer(GetTime());
 }
 
@@ -384,10 +381,7 @@ public void OnClientPostAdminCheck(int client) {
 	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
 
 	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
-		// Can't get client data. This used to apply a live "Session" Kban as a
-		// safety fallback; that duration no longer exists, so we only record an
-		// inert, already-expired audit entry (see Kban_AddBan) and let the
-		// client connect unrestricted.
+		// Can't get client data, record an audit-only entry without restricting.
 		LogMessage("Failed to get client data for client %L, recording an already-expired audit Kban entry", client);
 		if (!sIP[0])
 			strcopy(sIP, sizeof(sIP), "Unknown");
@@ -517,9 +511,6 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 			} else if (info.time_stamp_end > 0) { // Temporary kban
 				isTimeValid = (info.time_stamp_start <= currentTime && info.time_stamp_end > currentTime);
 			}
-			// A negative time_stamp_end ("Session"/"Temporary" kban) is no longer a
-			// supported live restriction; such rows are inserted already expired
-			// (is_expired=1), so they simply fall through as not valid here.
 
 			// Kban conditions check
 			if (isTimeValid) {
@@ -1484,11 +1475,6 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	info.length = length;
 	info.time_stamp_start = GetTime();
 
-	// A negative length is no longer a supported "Temporary"/"Session" kban
-	// duration. Any caller that still passes one (the connect-time fallback
-	// when client data can't be read, a malformed manual duration, or a
-	// third-party plugin calling KR_BanClient with a negative time) results
-	// in an inert, already-expired audit row instead of a live restriction.
 	bool bAuditOnly = (length < 0);
 
 	if (bAuditOnly) {
@@ -1502,9 +1488,6 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	char query[MAX_QUERIE_LENGTH];
 
 	if (bAuditOnly) {
-		// Not pushed to g_allKbans: it must not count as an active/online kban
-		// (no restriction, doesn't block future kbans on this steamid/ip, and
-		// won't show up in the online/active kban menus).
 		g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
 											... "`client_name`, `client_steamid`, `client_ip`,"
 											... "`admin_name`, `admin_steamid`, `reason`,"
@@ -1578,10 +1561,6 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 
 			FormatEx(message, sizeof(message), "Kban Added (Permanent)");
 		}
-
-		// Note: length < 0 ("Temporary"/"Session") never reaches PublishKban;
-		// Kban_AddBan() records that case as an inert audit-only row and
-		// returns early instead of applying a live restriction.
 
 		default: {
 			if(target != -1) {

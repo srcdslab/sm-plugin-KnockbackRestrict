@@ -46,10 +46,7 @@ public void __pl_knockbackrestrict_SetNTVOptional()
  *
  * @param admin 	Admin Index
  * @param target	Target Index
- * @param time      Ban's length in minutes (0 = permanent). A negative value is
- *                  no longer a supported "Temporary"/"Session" duration: it is
- *                  recorded as an inert, already-expired audit entry and does
- *                  NOT restrict the target.
+ * @param time      Ban's length in minutes (0 = permanent, negative = audit-only, no restriction)
  * @param sReason   Reason
 *********************************************************/
 native void KR_BanClient(int iadmin, int itarget, int itime, const char[] ssReason);
