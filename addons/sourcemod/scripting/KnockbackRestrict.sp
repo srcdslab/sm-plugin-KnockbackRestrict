@@ -54,7 +54,7 @@ ArrayList g_OfflinePlayers;
 
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
-	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
+	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber,
 	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade,
 	g_cvRemoveTempInterval;
 
@@ -140,7 +140,6 @@ public void OnPluginStart() {
 
 	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
-	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
 	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Interval time (in seconds) after map start to make all temp kbans expire", _, true, 0.0, true, 120.0);
 
 	/* Get Reduce Cvars */
@@ -321,7 +320,10 @@ public void OnMapStart() {
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 
-	/* This is to make temporary kbans expire */
+	/* Close out any legacy length=-1 rows written before -1/"Session" kbans were
+	   removed as a live restriction; new rows are now inserted already expired,
+	   so this is only relevant to pre-existing data. Safe to remove once no
+	   such legacy rows remain. */
 	CreateCheckTempKbansTimer(GetTime());
 }
 
@@ -382,8 +384,11 @@ public void OnClientPostAdminCheck(int client) {
 	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
 
 	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
-		// Can't get client data, restrict him by default.
-		LogMessage("Failed to get client data for client %L, applying temporary Kban", client);
+		// Can't get client data. This used to apply a live "Session" Kban as a
+		// safety fallback; that duration no longer exists, so we only record an
+		// inert, already-expired audit entry (see Kban_AddBan) and let the
+		// client connect unrestricted.
+		LogMessage("Failed to get client data for client %L, recording an already-expired audit Kban entry", client);
 		if (!sIP[0])
 			strcopy(sIP, sizeof(sIP), "Unknown");
 		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
@@ -511,9 +516,10 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 				isTimeValid = true;
 			} else if (info.time_stamp_end > 0) { // Temporary kban
 				isTimeValid = (info.time_stamp_start <= currentTime && info.time_stamp_end > currentTime);
-			} else if (info.time_stamp_end == -1) { // Session kban
-				isTimeValid = true;
 			}
+			// A negative time_stamp_end ("Session"/"Temporary" kban) is no longer a
+			// supported live restriction; such rows are inserted already expired
+			// (is_expired=1), so they simply fall through as not valid here.
 
 			// Kban conditions check
 			if (isTimeValid) {
@@ -751,7 +757,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 		else
 			continue;
 
-		// Skip if permanent ban (duration = 0) or temporary ban (duration = -1)
+		// Skip if permanent ban (duration = 0)
 		if (info.time_stamp_end <= 0)
 			continue;
 
@@ -1134,10 +1140,6 @@ Action Command_CheckKbStatus(int client, int args) {
 			CReplyToCommand(client, "%t", "PlayerRestrictedPerma", g_sName[target]);
 		}
 
-		case -1: {
-			CReplyToCommand(client, "%t", "PlayerRestrcitedTemp", g_sName[target]);
-		}
-
 		default: {
 			char sTimeLeft[32];
 			CheckPlayerExpireTime(info.time_stamp_end - GetTime(), sTimeLeft, sizeof(sTimeLeft));
@@ -1455,9 +1457,6 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	}
 
 	Kban info;
-	if(length < 0) {
-		length = -1;
-	}
 
 	if(!reason[0]) {
 		FormatEx(reason, REASON_MAX_LENGTH, "Trying To Boost");
@@ -1485,18 +1484,50 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	info.length = length;
 	info.time_stamp_start = GetTime();
 
-	if(length > 0) {
+	// A negative length is no longer a supported "Temporary"/"Session" kban
+	// duration. Any caller that still passes one (the connect-time fallback
+	// when client data can't be read, a malformed manual duration, or a
+	// third-party plugin calling KR_BanClient with a negative time) results
+	// in an inert, already-expired audit row instead of a live restriction.
+	bool bAuditOnly = (length < 0);
+
+	if (bAuditOnly) {
+		info.time_stamp_end = -1;
+	} else if(length > 0) {
 		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
-	} else if(length == 0) {
+	} else { // length == 0
 		info.time_stamp_end = 0; // Permanent
-	} else {
-		info.time_stamp_end = -1; // Session
+	}
+
+	char query[MAX_QUERIE_LENGTH];
+
+	if (bAuditOnly) {
+		// Not pushed to g_allKbans: it must not count as an active/online kban
+		// (no restriction, doesn't block future kbans on this steamid/ip, and
+		// won't show up in the online/active kban menus).
+		g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
+											... "`client_name`, `client_steamid`, `client_ip`,"
+											... "`admin_name`, `admin_steamid`, `reason`,"
+											... "`map`, `length`, `time_stamp_start`,"
+											... "`time_stamp_end`, `is_expired`, `is_removed`,"
+											... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
+											... "`reason_removed`)"
+											... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
+											... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
+											info.clientName, info.clientSteamID, info.clientIP,
+											info.adminName, info.adminSteamID, info.reason,
+											info.map, info.length, info.time_stamp_start,
+											info.time_stamp_end, 1, 0,
+											"null", "null", 0, "null");
+
+		g_hDB.Query(OnAuditKbanAdded, query);
+		LogAction(admin, target, "[Kb-Restrict] \"%L\" recorded an already-expired audit Kban entry for \"%L\" (negative/invalid duration: %d). No restriction was applied. \nReason: %s", admin, target, length, reason);
+		return;
 	}
 
 	// for editing id purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
-	char query[MAX_QUERIE_LENGTH];
 	g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
 										... "`client_name`, `client_steamid`, `client_ip`,"
 										... "`admin_name`, `admin_steamid`, `reason`,"
@@ -1512,10 +1543,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 										info.time_stamp_end, 0, 0,
 										"null", "null", 0, "null");
 
-	if (!g_cvSaveTempBans.BoolValue && length != -1)
-		g_hDB.Query(OnKbanAdded, query, arrayIndex);
-	else if (g_cvSaveTempBans.BoolValue)
-		g_hDB.Query(OnKbanAdded, query, arrayIndex);
+	g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	g_bIsClientRestricted[target] = true;
 	#if defined _zr_included
@@ -1551,17 +1579,9 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 			FormatEx(message, sizeof(message), "Kban Added (Permanent)");
 		}
 
-		case -1: {
-			if(target != -1) {
-				CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
-				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
-			} else {
-				CPrintToChatAll("%t", "RestrictedTempOffline", admin, info.clientName, KR_Tag, reason);
-				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" Temporarily. \nReason: %s", admin, info.clientName, reason);
-			}
-
-			FormatEx(message, sizeof(message), "Kban Added (Session)");
-		}
+		// Note: length < 0 ("Temporary"/"Session") never reaches PublishKban;
+		// Kban_AddBan() records that case as an inert audit-only row and
+		// returns early instead of applying a live restriction.
 
 		default: {
 			if(target != -1) {
@@ -1597,6 +1617,12 @@ void OnKbanPublished(Database db, DBResultSet results, const char[] error, int a
 		LogError("Invalid arrayIndex %d. g_allKbans has length %d.", arrayIndex, g_allKbans.Length);
 	}
 
+	if(!IsDBConnected() || results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_INSERT, error);
+	}
+}
+
+void OnAuditKbanAdded(Database db, DBResultSet results, const char[] error, any data) {
 	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_INSERT, error);
 	}

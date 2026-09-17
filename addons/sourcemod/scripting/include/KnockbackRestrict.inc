@@ -46,7 +46,10 @@ public void __pl_knockbackrestrict_SetNTVOptional()
  *
  * @param admin 	Admin Index
  * @param target	Target Index
- * @param time      Ban's length
+ * @param time      Ban's length in minutes (0 = permanent). A negative value is
+ *                  no longer a supported "Temporary"/"Session" duration: it is
+ *                  recorded as an inert, already-expired audit entry and does
+ *                  NOT restrict the target.
  * @param sReason   Reason
 *********************************************************/
 native void KR_BanClient(int iadmin, int itarget, int itime, const char[] ssReason);
@@ -91,7 +94,7 @@ native void KR_DisplayLengthsMenu(int admin, int target, LengthCallback callback
  *
  * @param client        Client index
  * @param admin         Admin index
- * @param length        Ban length in minutes (0 = permanent, -1 = temporary)
+ * @param length        Ban length in minutes (0 = permanent)
  * @param reason        Ban reason
  * @param kbansNumber   Number of active knockback restrictions for this client
  * @noreturn

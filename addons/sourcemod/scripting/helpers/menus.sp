@@ -419,9 +419,6 @@ void Kban_OpenKbanInfoMenu(int client, int id) {
 	if(info.length == 0) {
 		FormatEx(duration, sizeof(duration), "%t", "Permanent");
 		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Never");
-	} else if(info.length == -1) {
-		FormatEx(duration, sizeof(duration), "%t", "Temporary");
-		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Until Map End");
 	} else {
 		FormatEx(duration, sizeof(duration), "%t", "Minutes", info.length);
 		FormatTime(dateEnd, sizeof(dateEnd), "%d %B %G @ %r", info.time_stamp_end);
@@ -557,9 +554,6 @@ void DisplayLengths_Menu(int client) {
 	char sBuffer[64];
 	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Permanently");
 	menu.AddItem("0", sBuffer, iMaxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
-
-	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
-	menu.AddItem("-1", sBuffer);
 
 	AddLength(menu, 30, "Minute", "Minutes", iMaxTime);
 
