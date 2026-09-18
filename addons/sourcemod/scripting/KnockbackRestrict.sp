@@ -381,8 +381,8 @@ public void OnClientPostAdminCheck(int client) {
 	char sIP[MAX_IP_LENGTH], sSteamID[MAX_AUTHID_LENGTH], sName[MAX_NAME_LENGTH];
 
 	if (!GetClientIP(client, sIP, sizeof(sIP)) || !GetClientAuthId(client, AuthId_Steam2, sSteamID, sizeof(sSteamID), false) || !GetClientName(client, sName, sizeof(sName))) {
-		// Can't get client data, record an audit-only entry without restricting.
-		LogMessage("Failed to get client data for client %L, recording an already-expired audit Kban entry", client);
+		// Can't get client data, let the client connect without restricting them.
+		LogMessage("Failed to get client data for client %L, skipping restriction", client);
 		if (!sIP[0])
 			strcopy(sIP, sizeof(sIP), "Unknown");
 		strcopy(sSteamID, sizeof(sSteamID), NOSTEAMID);
@@ -1470,6 +1470,12 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		return;
 	}
 
+	// Only the server itself (no admin attached) may issue a negative/audit-only duration.
+	// Anything admin- or plugin-attributed keeps a valid length instead.
+	if (length < 0 && admin >= 1) {
+		length = g_cvDefaultLength.IntValue;
+	}
+
 	FormatEx(info.map, sizeof(info.map), g_sMapName);
 	FormatEx(info.reason, sizeof(info.reason), reason);
 	info.length = length;
@@ -1478,35 +1484,19 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	bool bAuditOnly = (length < 0);
 
 	if (bAuditOnly) {
+		// Server-only, not persisted: log-only trail, no restriction and no DB row.
 		info.time_stamp_end = -1;
-	} else if(length > 0) {
+		LogAction(admin, target, "[Kb-Restrict] \"%L\" recorded a negative/invalid duration (%d) for \"%L\". No restriction was applied and no database entry was created. \nReason: %s", admin, length, target, reason);
+		return;
+	}
+
+	if(length > 0) {
 		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
 	} else { // length == 0
 		info.time_stamp_end = 0; // Permanent
 	}
 
 	char query[MAX_QUERIE_LENGTH];
-
-	if (bAuditOnly) {
-		g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
-											... "`client_name`, `client_steamid`, `client_ip`,"
-											... "`admin_name`, `admin_steamid`, `reason`,"
-											... "`map`, `length`, `time_stamp_start`,"
-											... "`time_stamp_end`, `is_expired`, `is_removed`,"
-											... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
-											... "`reason_removed`)"
-											... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-											... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
-											info.clientName, info.clientSteamID, info.clientIP,
-											info.adminName, info.adminSteamID, info.reason,
-											info.map, info.length, info.time_stamp_start,
-											info.time_stamp_end, 1, 0,
-											"null", "null", 0, "null");
-
-		g_hDB.Query(OnAuditKbanAdded, query);
-		LogAction(admin, target, "[Kb-Restrict] \"%L\" recorded an already-expired audit Kban entry for \"%L\" (negative/invalid duration: %d). No restriction was applied. \nReason: %s", admin, target, length, reason);
-		return;
-	}
 
 	// for editing id purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
@@ -1596,12 +1586,6 @@ void OnKbanPublished(Database db, DBResultSet results, const char[] error, int a
 		LogError("Invalid arrayIndex %d. g_allKbans has length %d.", arrayIndex, g_allKbans.Length);
 	}
 
-	if(!IsDBConnected() || results == null || error[0]) {
-		Kban_GiveError(ERROR_TYPE_INSERT, error);
-	}
-}
-
-void OnAuditKbanAdded(Database db, DBResultSet results, const char[] error, any data) {
 	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_INSERT, error);
 	}

@@ -46,7 +46,7 @@ public void __pl_knockbackrestrict_SetNTVOptional()
  *
  * @param admin 	Admin Index
  * @param target	Target Index
- * @param time      Ban's length in minutes (0 = permanent, negative = audit-only, no restriction)
+ * @param time      Ban's length in minutes (0 = permanent; negative is only honored when iadmin < 1 (server/console) — logged but not restricted, no database row; with a real admin index a negative value is clamped to the default length)
  * @param sReason   Reason
 *********************************************************/
 native void KR_BanClient(int iadmin, int itarget, int itime, const char[] ssReason);
