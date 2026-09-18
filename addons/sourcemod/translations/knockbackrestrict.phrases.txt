@@ -20,6 +20,16 @@
 		"#format"	"{1:N},{2:N},{3:s},{4:s}"
 		"en"		"{white}{1} {red}Restricted {white}{2}[{olive}Offline{white}] {red}Permanently.\n{3} Reason: {4}."
 	}
+	"RestrictedTemp"
+	{
+		"#format"	"{1:N},{2:N},{3:s},{4:s}"
+		"en"		"{white}{1} {red}Restricted {white}{2} {red}Temporarily.\n{3} Reason: {4}."
+	}
+    "RestrictedTempOffline"
+	{
+		"#format"	"{1:N},{2:N},{3:s},{4:s}"
+		"en"		"{white}{1} {red}Restricted {white}{2}[{olive}Offline{white}] {red}Temporarily.\n{3} Reason: {4}."
+	}
 	"UnRestricted"
 	{
 		"#format"	"{1:N},{2:N},{3:s},{4:s}"
@@ -46,6 +56,11 @@
 	{
 		"#format"	"{1:s}"
 		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Permanently{white}."
+	}
+	"PlayerRestrcitedTemp"
+	{
+		"#format"	"{1:s}"
+		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Temporarily{white}."
 	}
 	"RestrictTimeLeft"
 	{
@@ -155,9 +170,17 @@
 	{
 		"en"		"Permanently"
 	}
+	"Temporary"
+	{
+		"en"		"Temporary"
+	}
 	"Never"
 	{
 		"en"		"Never"
+	}
+	"Until Map End"
+	{
+		"en"		"Until Map End"
 	}
 	"Minute"
 	{

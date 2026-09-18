@@ -419,6 +419,9 @@ void Kban_OpenKbanInfoMenu(int client, int id) {
 	if(info.length == 0) {
 		FormatEx(duration, sizeof(duration), "%t", "Permanent");
 		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Never");
+	} else if(info.length == -1) {
+		FormatEx(duration, sizeof(duration), "%t", "Temporary");
+		FormatEx(dateEnd, sizeof(dateEnd), "%t", "Until Map End");
 	} else {
 		FormatEx(duration, sizeof(duration), "%t", "Minutes", info.length);
 		FormatTime(dateEnd, sizeof(dateEnd), "%d %B %G @ %r", info.time_stamp_end);
