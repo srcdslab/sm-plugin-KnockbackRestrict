@@ -47,15 +47,15 @@
 		"#format"	"{1:s}"
 		"en"		"{olive}{1} {white}is not currently Kb-Restricted{white}."
 	}
-	"PlayerRestrictedPerma"
-	{
-		"#format"	"{1:s}"
-		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Permanently{white}."
-	}
 	"PlayerRestrcitedTemp"
 	{
 		"#format"	"{1:s}"
 		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Temporarily{white}."
+	}
+	"PlayerRestrictedPerma"
+	{
+		"#format"	"{1:s}"
+		"en"		"{olive}{1} {white}is currently {fullred}Kb-Restricted Permanently{white}."
 	}
 	"RestrictTimeLeft"
 	{
