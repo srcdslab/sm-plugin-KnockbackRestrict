@@ -1385,8 +1385,7 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		FormatEx(adminSteamID, sizeof(adminSteamID), "Console");
 	}
 
-	// Session kbans (negative id) were never persisted, so there's no DB row to update.
-	if (info.id >= 0) {
+	if (info.id >= 0) { // negative id: Session kban, no DB row to update
 		char query[MAX_QUERIE_LENGTH];
 		if (!isExpired) {
 			g_hDB.Format(query, sizeof(query), 		"UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
@@ -1480,8 +1479,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		return;
 	}
 
-	// Only the server itself (no admin attached) may issue a negative/session duration.
-	// Anything admin- or plugin-attributed keeps a valid length instead.
+	// Only the server (no admin attached) may issue a Session duration.
 	if (length < 0 && admin >= 1) {
 		length = g_cvDefaultLength.IntValue;
 	}
@@ -1494,7 +1492,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	bool bSession = (length < 0);
 
 	if (bSession) {
-		info.time_stamp_end = -1; // Session: live restriction, never persisted to the DB.
+		info.time_stamp_end = -1; // Session
 	} else if(length > 0) {
 		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
 	} else { // length == 0
@@ -1504,8 +1502,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	int arrayIndex;
 
 	if (bSession) {
-		// Negative, server-issued IDs so menus/lookups can still address this entry; never a real DB row.
-		info.id = --g_iNextSessionKbanId;
+		info.id = --g_iNextSessionKbanId; // negative id: memory-only, never a DB row
 		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 	} else {
 		// for editing id purpose
@@ -1565,13 +1562,10 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		}
 
 		case -1: {
-			if(target != -1) {
-				CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
-				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
-			} else {
-				CPrintToChatAll("%t", "RestrictedTempOffline", admin, info.clientName, KR_Tag, reason);
-				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" Temporarily. \nReason: %s", admin, info.clientName, reason);
-			}
+			// Session kbans only ever come from Kban_AddBan on an online target;
+			// Kban_AddOfflineBan clamps negative lengths, so there's no offline case here.
+			CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
+			LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
 
 			FormatEx(message, sizeof(message), "Kban Added (Session)");
 		}
