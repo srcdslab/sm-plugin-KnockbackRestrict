@@ -1562,8 +1562,7 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		}
 
 		case -1: {
-			// Session kbans only ever come from Kban_AddBan on an online target;
-			// Kban_AddOfflineBan clamps negative lengths, so there's no offline case here.
+			// no offline case: Kban_AddOfflineBan clamps negative lengths
 			CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
 			LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
 

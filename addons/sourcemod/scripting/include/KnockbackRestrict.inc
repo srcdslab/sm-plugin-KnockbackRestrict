@@ -46,7 +46,7 @@ public void __pl_knockbackrestrict_SetNTVOptional()
  *
  * @param admin 	Admin Index
  * @param target	Target Index
- * @param time      Ban's length in minutes (0 = permanent, negative = Session restriction; only honored when iadmin < 1, otherwise clamped to the default length)
+ * @param time      Ban's length in minutes (0 = permanent, negative = server-only Session ban)
  * @param sReason   Reason
 *********************************************************/
 native void KR_BanClient(int iadmin, int itarget, int itime, const char[] ssReason);
@@ -91,7 +91,7 @@ native void KR_DisplayLengthsMenu(int admin, int target, LengthCallback callback
  *
  * @param client        Client index
  * @param admin         Admin index
- * @param length        Ban length in minutes (0 = permanent, negative = server-issued Session restriction, never persisted to the database)
+ * @param length        Ban length in minutes (0 = permanent, negative = Session restriction)
  * @param reason        Ban reason
  * @param kbansNumber   Number of active knockback restrictions for this client
  * @noreturn
