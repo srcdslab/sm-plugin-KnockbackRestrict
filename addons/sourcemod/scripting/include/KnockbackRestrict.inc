@@ -12,8 +12,8 @@
 #define _KnockbackRestrict_included_
 
 #define KR_V_MAJOR   "4"
-#define KR_V_MINOR   "0"
-#define KR_V_PATCH   "9"
+#define KR_V_MINOR   "1"
+#define KR_V_PATCH   "0"
 
 #define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
 
@@ -46,7 +46,7 @@ public void __pl_knockbackrestrict_SetNTVOptional()
  *
  * @param admin 	Admin Index
  * @param target	Target Index
- * @param time      Ban's length
+ * @param time      Ban's length in minutes (0 = permanent, negative = server-only Session ban)
  * @param sReason   Reason
 *********************************************************/
 native void KR_BanClient(int iadmin, int itarget, int itime, const char[] ssReason);
@@ -91,7 +91,7 @@ native void KR_DisplayLengthsMenu(int admin, int target, LengthCallback callback
  *
  * @param client        Client index
  * @param admin         Admin index
- * @param length        Ban length in minutes (0 = permanent, -1 = temporary)
+ * @param length        Ban length in minutes (0 = permanent, negative = Session restriction)
  * @param reason        Ban reason
  * @param kbansNumber   Number of active knockback restrictions for this client
  * @noreturn

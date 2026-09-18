@@ -558,9 +558,6 @@ void DisplayLengths_Menu(int client) {
 	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Permanently");
 	menu.AddItem("0", sBuffer, iMaxTime == 0 ? ITEMDRAW_DEFAULT : ITEMDRAW_DISABLED);
 
-	FormatEx(sBuffer, sizeof(sBuffer), "%t", "Temporary");
-	menu.AddItem("-1", sBuffer);
-
 	AddLength(menu, 30, "Minute", "Minutes", iMaxTime);
 
 	AddLength(menu, 60, "Hour", "Hours", iMaxTime);

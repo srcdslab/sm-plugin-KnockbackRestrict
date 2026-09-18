@@ -52,9 +52,11 @@ Database g_hDB;
 ArrayList g_allKbans;
 ArrayList g_OfflinePlayers;
 
+int g_iNextSessionKbanId = 0;
+
 ConVar g_cvDefaultLength,
 	g_cvMaxBanTimeBanFlag, g_cvMaxBanTimeKickFlag, g_cvMaxBanTimeRconFlag,
-	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber, g_cvSaveTempBans,
+	g_cvDisplayConnectMsg, g_cvGetRealKbanNumber,
 	g_cvReduceKnife, g_cvReduceKnifeMod, g_cvReducePistol, g_cvReduceSMG, g_cvReduceRifle, g_cvReduceShotgun, g_cvReduceSniper, g_cvReduceSemiAutoSniper, g_cvReduceGrenade,
 	g_cvRemoveTempInterval;
 
@@ -140,7 +142,6 @@ public void OnPluginStart() {
 
 	g_cvDisplayConnectMsg		= CreateConVar("sm_kbrestrict_display_connect_msg", "1", "Display a message to the player when he connects", _, true, 0.0, true, 1.0);
 	g_cvGetRealKbanNumber		= CreateConVar("sm_kbrestrict_get_real_kban_number", "1", "Get the real number of kbans a player has (Do not include removed one)", _, true, 0.0, true, 1.0);
-	g_cvSaveTempBans			= CreateConVar("sm_kbrestrict_save_tempbans", "1", "Save temporary bans to the database", _, true, 0.0, true, 1.0);
 	g_cvRemoveTempInterval 		= CreateConVar("sm_kbrestrict_remove_temp_interval", "45.0", "Interval time (in seconds) after map start to make all temp kbans expire", _, true, 0.0, true, 120.0);
 
 	/* Get Reduce Cvars */
@@ -311,6 +312,7 @@ public void OnMapStart() {
 	/* ARRAYLIST */
 	delete g_allKbans;
 	g_allKbans = new ArrayList(ByteCountToCells(2048));
+	g_iNextSessionKbanId = 0;
 
 	delete g_OfflinePlayers;
 	g_OfflinePlayers = new ArrayList(ByteCountToCells(512));
@@ -321,7 +323,7 @@ public void OnMapStart() {
 	/* Check all kbans by a timer */
 	CreateTimer(30.0, CheckAllKbans_Timer, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 
-	/* This is to make temporary kbans expire */
+	/* Close out legacy length=-1 rows from before Session kbans were removed */
 	CreateCheckTempKbansTimer(GetTime());
 }
 
@@ -511,8 +513,6 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 				isTimeValid = true;
 			} else if (info.time_stamp_end > 0) { // Temporary kban
 				isTimeValid = (info.time_stamp_start <= currentTime && info.time_stamp_end > currentTime);
-			} else if (info.time_stamp_end == -1) { // Session kban
-				isTimeValid = true;
 			}
 
 			// Kban conditions check
@@ -751,7 +751,7 @@ Action CheckAllKbans_Timer(Handle timer) {
 		else
 			continue;
 
-		// Skip if permanent ban (duration = 0) or temporary ban (duration = -1)
+		// Skip if permanent ban (duration = 0)
 		if (info.time_stamp_end <= 0)
 			continue;
 
@@ -1385,18 +1385,20 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		FormatEx(adminSteamID, sizeof(adminSteamID), "Console");
 	}
 
-	char query[MAX_QUERIE_LENGTH];
-	if (!isExpired) {
-		g_hDB.Format(query, sizeof(query), 		"UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
-											... "`admin_name_removed`='%s', `admin_steamid_removed`='%s',"
-											... "`time_stamp_removed`=%d, `reason_removed`='%s' WHERE `id`=%d",
-											adminName, adminSteamID,
-											GetTime(), reason, info.id);
-	} else {
-		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1 WHERE `id`=%d", info.id);
-	}
+	if (info.id >= 0) { // negative id: Session kban, no DB row to update
+		char query[MAX_QUERIE_LENGTH];
+		if (!isExpired) {
+			g_hDB.Format(query, sizeof(query), 		"UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
+												... "`admin_name_removed`='%s', `admin_steamid_removed`='%s',"
+												... "`time_stamp_removed`=%d, `reason_removed`='%s' WHERE `id`=%d",
+												adminName, adminSteamID,
+												GetTime(), reason, info.id);
+		} else {
+			g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1 WHERE `id`=%d", info.id);
+		}
 
-	g_hDB.Query(OnKbanRemove, query);
+		g_hDB.Query(OnKbanRemove, query);
+	}
 
 	for(int i = 0; i < g_allKbans.Length; i++) {
 		Kban exInfo;
@@ -1455,9 +1457,6 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	}
 
 	Kban info;
-	if(length < 0) {
-		length = -1;
-	}
 
 	if(!reason[0]) {
 		FormatEx(reason, REASON_MAX_LENGTH, "Trying To Boost");
@@ -1480,42 +1479,53 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		return;
 	}
 
+	// Only the server (no admin attached) may issue a Session duration.
+	if (length < 0 && admin >= 1) {
+		length = g_cvDefaultLength.IntValue;
+	}
+
 	FormatEx(info.map, sizeof(info.map), g_sMapName);
 	FormatEx(info.reason, sizeof(info.reason), reason);
 	info.length = length;
 	info.time_stamp_start = GetTime();
 
-	if(length > 0) {
-		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
-	} else if(length == 0) {
-		info.time_stamp_end = 0; // Permanent
-	} else {
+	bool bSession = (length < 0);
+
+	if (bSession) {
 		info.time_stamp_end = -1; // Session
+	} else if(length > 0) {
+		info.time_stamp_end = (GetTime() + (length * 60)); // Duration in minutes
+	} else { // length == 0
+		info.time_stamp_end = 0; // Permanent
 	}
 
-	// for editing id purpose
-	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+	int arrayIndex;
 
-	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
-										... "`client_name`, `client_steamid`, `client_ip`,"
-										... "`admin_name`, `admin_steamid`, `reason`,"
-										... "`map`, `length`, `time_stamp_start`,"
-										... "`time_stamp_end`, `is_expired`, `is_removed`,"
-										... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
-										... "`reason_removed`)"
-										... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-										... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
-										info.clientName, info.clientSteamID, info.clientIP,
-										info.adminName, info.adminSteamID, info.reason,
-										info.map, info.length, info.time_stamp_start,
-										info.time_stamp_end, 0, 0,
-										"null", "null", 0, "null");
+	if (bSession) {
+		info.id = --g_iNextSessionKbanId; // negative id: memory-only, never a DB row
+		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+	} else {
+		// for editing id purpose
+		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
-	if (!g_cvSaveTempBans.BoolValue && length != -1)
+		char query[MAX_QUERIE_LENGTH];
+		g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
+											... "`client_name`, `client_steamid`, `client_ip`,"
+											... "`admin_name`, `admin_steamid`, `reason`,"
+											... "`map`, `length`, `time_stamp_start`,"
+											... "`time_stamp_end`, `is_expired`, `is_removed`,"
+											... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
+											... "`reason_removed`)"
+											... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
+											... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
+											info.clientName, info.clientSteamID, info.clientIP,
+											info.adminName, info.adminSteamID, info.reason,
+											info.map, info.length, info.time_stamp_start,
+											info.time_stamp_end, 0, 0,
+											"null", "null", 0, "null");
+
 		g_hDB.Query(OnKbanAdded, query, arrayIndex);
-	else if (g_cvSaveTempBans.BoolValue)
-		g_hDB.Query(OnKbanAdded, query, arrayIndex);
+	}
 
 	g_bIsClientRestricted[target] = true;
 	#if defined _zr_included
@@ -1552,13 +1562,9 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		}
 
 		case -1: {
-			if(target != -1) {
-				CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
-				LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
-			} else {
-				CPrintToChatAll("%t", "RestrictedTempOffline", admin, info.clientName, KR_Tag, reason);
-				LogAction(admin, -1, "\"%L\" has Offline Kb-Restricted \"%s\" Temporarily. \nReason: %s", admin, info.clientName, reason);
-			}
+			// no offline case: Kban_AddOfflineBan clamps negative lengths
+			CPrintToChatAll("%t", "RestrictedTemp", admin, target, KR_Tag, reason);
+			LogAction(admin, target, "\"%L\" has Kb-Restricted \"%L\" Temporarily. \nReason: %s", admin, target, reason);
 
 			FormatEx(message, sizeof(message), "Kban Added (Session)");
 		}
