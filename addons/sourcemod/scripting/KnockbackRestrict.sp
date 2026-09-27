@@ -1381,10 +1381,6 @@ void OnCreateTablesError(Database db, any data, int numQueries, const char[] err
 }
 
 stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExpired = false) {
-	if(!IsDBConnected()) {
-		return;
-	}
-
 	Kban info;
 
 	if (!isExpired) {
@@ -1402,6 +1398,12 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 				return;
 			}
 		}
+	}
+
+	// A kban with a DB row can't be removed while the database is unavailable.
+	// Negative ids are memory-only (session kbans, kbans still waiting for the DB).
+	if(info.id >= 0 && !IsDBConnected()) {
+		return;
 	}
 
 	char adminName[MAX_NAME_LENGTH], adminSteamID[MAX_AUTHID_LENGTH];
@@ -1427,6 +1429,12 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		}
 
 		g_hDB.Query(OnKbanRemove, query);
+	} else {
+		// Not written yet: drop it so Kban_FlushPending() doesn't save a removed kban
+		int pendingIndex = g_hPendingKbans.FindValue(info.id);
+		if (pendingIndex != -1) {
+			g_hPendingKbans.Erase(pendingIndex);
+		}
 	}
 
 	for(int i = 0; i < g_allKbans.Length; i++) {
@@ -1457,19 +1465,22 @@ void Kban_PublishKunban(int target, int admin, const char[] reason) {
 	CPrintToChatAll("%t", "UnRestricted", admin, target, KR_Tag, reason);
 	LogAction(admin, target, "[Kb-Restrict] \"%L\" has Kb-UnRestricted \"%L\". \nReason: %s", admin, target, reason);
 
+	KbanLog log;
+	strcopy(log.clientName, sizeof(log.clientName), g_sName[target]);
+	strcopy(log.clientSteamID, sizeof(log.clientSteamID), g_sSteamIDs[target]);
+	strcopy(log.adminName, sizeof(log.adminName), admin < 1 ? "Console" : g_sName[admin]);
+	strcopy(log.adminSteamID, sizeof(log.adminSteamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
+	strcopy(log.message, sizeof(log.message), "Removed Kban");
+	log.time_stamp = GetTime();
+
 	if(g_hDB == null) {
+		// Kban_FlushPending() writes it once the database is back
+		g_hPendingLogs.PushArray(log, sizeof(log));
 		return;
 	}
 
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 	"INSERT INTO `KbRestrict_srvlogs` ("
-									... "`client_name`, `client_steamid`,"
-									... "`admin_name`, `admin_steamid`,"
-									... "`message`, `time_stamp`)"
-									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
-										g_sName[target], g_sSteamIDs[target],
-										admin < 1 ? "Console" : g_sName[admin], admin < 1 ? "Console" : g_sSteamIDs[admin],
-										"Removed Kban", GetTime());
+	Kban_FormatLogQuery(log, query, sizeof(query));
 	g_hDB.Query(OnKbanRemove, query);
 }
 
