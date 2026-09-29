@@ -1682,9 +1682,9 @@ void Kban_ApplyPendingKban(int client) {
 		}
 
 		// Same matching as OnPostVerifyKban: SteamID, or IP for a kban without SteamID
-		bool bNoSteamID = (strcmp(info.clientSteamID, NOSTEAMID, false) == 0);
-		if (!(!bNoSteamID && strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0)
-			&& !(bNoSteamID && strcmp(info.clientIP, g_sIPs[client], false) == 0)) {
+		bool noSteamID = (strcmp(info.clientSteamID, NOSTEAMID, false) == 0);
+		if (!(!noSteamID && strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0)
+			&& !(noSteamID && strcmp(info.clientIP, g_sIPs[client], false) == 0)) {
 			continue;
 		}
 
@@ -1734,10 +1734,8 @@ void Kban_FlushPending() {
 		g_hDB.Query(OnPendingInserted, query);
 	}
 
-	delete g_hPendingKbans;
-	g_hPendingKbans = new ArrayList(sizeof(Kban));
-	delete g_hPendingLogs;
-	g_hPendingLogs = new ArrayList(sizeof(KbanLog));
+	g_hPendingKbans.Clear();
+	g_hPendingLogs.Clear();
 }
 
 void OnPendingInserted(Database db, DBResultSet results, const char[] error, any data) {
