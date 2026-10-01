@@ -52,6 +52,11 @@ Database g_hDB;
 ArrayList g_allKbans;
 ArrayList g_OfflinePlayers;
 
+// Kbans and srvlogs entries created while the database was unavailable, written
+// by Kban_FlushPending() once it is back. Kept across map changes.
+ArrayList g_hPendingKbans;
+ArrayList g_hPendingLogs;
+
 int g_iNextSessionKbanId = 0;
 
 ConVar g_cvDefaultLength,
@@ -107,6 +112,15 @@ enum struct OfflinePlayer {
 	char name[MAX_NAME_LENGTH];
 	char steamID[MAX_AUTHID_LENGTH];
 	char ip[MAX_IP_LENGTH];
+}
+
+enum struct KbanLog {
+	char clientName[MAX_NAME_LENGTH];
+	char clientSteamID[MAX_AUTHID_LENGTH];
+	char adminName[MAX_NAME_LENGTH];
+	char adminSteamID[MAX_AUTHID_LENGTH];
+	char message[REASON_MAX_LENGTH];
+	int time_stamp;
 }
 
 public Plugin myinfo = {
@@ -182,6 +196,10 @@ public void OnPluginStart() {
 	TopMenu topmenu;
 	if(LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
 		OnAdminMenuReady(topmenu);
+
+	/* Pending database writes */
+	g_hPendingKbans = new ArrayList(sizeof(Kban));
+	g_hPendingLogs = new ArrayList(sizeof(KbanLog));
 
 	/* Prefix */
 	CSetPrefix(KR_Tag);
@@ -314,6 +332,14 @@ public void OnMapStart() {
 	g_allKbans = new ArrayList(ByteCountToCells(2048));
 	g_iNextSessionKbanId = 0;
 
+	// Pending kbans lost their in-memory copy (id 0 = not in g_allKbans)
+	for (int i = 0; i < g_hPendingKbans.Length; i++) {
+		Kban info;
+		g_hPendingKbans.GetArray(i, info, sizeof(info));
+		info.id = 0;
+		g_hPendingKbans.SetArray(i, info, sizeof(info));
+	}
+
 	delete g_OfflinePlayers;
 	g_OfflinePlayers = new ArrayList(ByteCountToCells(512));
 
@@ -437,7 +463,12 @@ public Action Timer_AnnouncePlayer(Handle timer, int serial) {
 }
 
 stock void VerifyKbanClient(int client) {
-	if (g_bUserVerified[client] || !IsDBConnected()) {
+	if (g_bUserVerified[client]) {
+		return;
+	}
+
+	if (!IsDBConnected()) {
+		Kban_ApplyPendingKban(client);
 		return;
 	}
 
@@ -1048,25 +1079,22 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 		info.time_stamp_end = 0; // Permanent
 	}
 
+	if (!IsDBConnected()) {
+		// Kban_FlushPending() writes the kban once the database is back
+		info.id = --g_iNextSessionKbanId;
+		g_allKbans.PushArray(info, sizeof(info));
+		g_hPendingKbans.PushArray(info, sizeof(info));
+		CReplyToCommand(admin, "%t", "KbanPendingDB");
+
+		PublishKban(info, admin, _, reason);
+		return;
+	}
+
 	// Edit ID purpose
 	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
-										... "`client_name`, `client_steamid`, `client_ip`,"
-										... "`admin_name`, `admin_steamid`, `reason`,"
-										... "`map`, `length`, `time_stamp_start`,"
-										... "`time_stamp_end`, `is_expired`, `is_removed`,"
-										... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
-										... "`reason_removed`)"
-										... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-										... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
-										player.name, info.clientSteamID, info.clientIP,
-										adminName, info.adminSteamID, reason,
-										info.map, info.length, info.time_stamp_start,
-										info.time_stamp_end, 0, 0,
-										"null", "null", 0, "null");
-
+	Kban_FormatInsertQuery(info, query, sizeof(query));
 	g_hDB.Query(OnKbanAdded, query, arrayIndex);
 
 	PublishKban(info, admin, _, reason);
@@ -1237,6 +1265,7 @@ void DB_OnConnect(Database db, const char[] error, any data)
 	g_hDB = db;
 	g_hDB.SetCharset(DB_CHARSET);
 	DB_CreateTables();
+	Kban_FlushPending();
 }
 
 bool IsDBConnected()
@@ -1352,10 +1381,6 @@ void OnCreateTablesError(Database db, any data, int numQueries, const char[] err
 }
 
 stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExpired = false) {
-	if(!IsDBConnected()) {
-		return;
-	}
-
 	Kban info;
 
 	if (!isExpired) {
@@ -1373,6 +1398,12 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 				return;
 			}
 		}
+	}
+
+	// A kban with a DB row can't be removed while the database is unavailable.
+	// Negative ids are memory-only (session kbans, kbans still waiting for the DB).
+	if(info.id >= 0 && !IsDBConnected()) {
+		return;
 	}
 
 	char adminName[MAX_NAME_LENGTH], adminSteamID[MAX_AUTHID_LENGTH];
@@ -1398,6 +1429,12 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		}
 
 		g_hDB.Query(OnKbanRemove, query);
+	} else {
+		// Not written yet: drop it so Kban_FlushPending() doesn't save a removed kban
+		int pendingIndex = g_hPendingKbans.FindValue(info.id);
+		if (pendingIndex != -1) {
+			g_hPendingKbans.Erase(pendingIndex);
+		}
 	}
 
 	for(int i = 0; i < g_allKbans.Length; i++) {
@@ -1428,19 +1465,22 @@ void Kban_PublishKunban(int target, int admin, const char[] reason) {
 	CPrintToChatAll("%t", "UnRestricted", admin, target, KR_Tag, reason);
 	LogAction(admin, target, "[Kb-Restrict] \"%L\" has Kb-UnRestricted \"%L\". \nReason: %s", admin, target, reason);
 
+	KbanLog log;
+	strcopy(log.clientName, sizeof(log.clientName), g_sName[target]);
+	strcopy(log.clientSteamID, sizeof(log.clientSteamID), g_sSteamIDs[target]);
+	strcopy(log.adminName, sizeof(log.adminName), admin < 1 ? "Console" : g_sName[admin]);
+	strcopy(log.adminSteamID, sizeof(log.adminSteamID), admin < 1 ? "Console" : g_sSteamIDs[admin]);
+	strcopy(log.message, sizeof(log.message), "Removed Kban");
+	log.time_stamp = GetTime();
+
 	if(g_hDB == null) {
+		// Kban_FlushPending() writes it once the database is back
+		g_hPendingLogs.PushArray(log, sizeof(log));
 		return;
 	}
 
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 	"INSERT INTO `KbRestrict_srvlogs` ("
-									... "`client_name`, `client_steamid`,"
-									... "`admin_name`, `admin_steamid`,"
-									... "`message`, `time_stamp`)"
-									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
-										g_sName[target], g_sSteamIDs[target],
-										admin < 1 ? "Console" : g_sName[admin], admin < 1 ? "Console" : g_sSteamIDs[admin],
-										"Removed Kban", GetTime());
+	Kban_FormatLogQuery(log, query, sizeof(query));
 	g_hDB.Query(OnKbanRemove, query);
 }
 
@@ -1504,26 +1544,18 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 	if (bSession) {
 		info.id = --g_iNextSessionKbanId; // negative id: memory-only, never a DB row
 		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+	} else if (!IsDBConnected()) {
+		// Restrict now, Kban_FlushPending() writes the kban once the database is back
+		info.id = --g_iNextSessionKbanId;
+		g_allKbans.PushArray(info, sizeof(info));
+		g_hPendingKbans.PushArray(info, sizeof(info));
+		CReplyToCommand(admin, "%t", "KbanPendingDB");
 	} else {
 		// for editing id purpose
 		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
 
 		char query[MAX_QUERIE_LENGTH];
-		g_hDB.Format(query, sizeof(query), 		"INSERT INTO `KbRestrict_CurrentBans` ("
-											... "`client_name`, `client_steamid`, `client_ip`,"
-											... "`admin_name`, `admin_steamid`, `reason`,"
-											... "`map`, `length`, `time_stamp_start`,"
-											... "`time_stamp_end`, `is_expired`, `is_removed`,"
-											... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
-											... "`reason_removed`)"
-											... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-											... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
-											info.clientName, info.clientSteamID, info.clientIP,
-											info.adminName, info.adminSteamID, info.reason,
-											info.map, info.length, info.time_stamp_start,
-											info.time_stamp_end, 0, 0,
-											"null", "null", 0, "null");
-
+		Kban_FormatInsertQuery(info, query, sizeof(query));
 		g_hDB.Query(OnKbanAdded, query, arrayIndex);
 	}
 
@@ -1582,20 +1614,134 @@ void PublishKban(Kban info, int admin, int target = -1, const char[] reason) {
 		}
 	}
 
+	KbanLog log;
+	strcopy(log.clientName, sizeof(log.clientName), info.clientName);
+	strcopy(log.clientSteamID, sizeof(log.clientSteamID), info.clientSteamID);
+	strcopy(log.adminName, sizeof(log.adminName), info.adminName);
+	strcopy(log.adminSteamID, sizeof(log.adminSteamID), info.adminSteamID);
+	strcopy(log.message, sizeof(log.message), message);
+	log.time_stamp = GetTime();
+
+	if (!IsDBConnected()) {
+		// Kban_FlushPending() writes it once the database is back
+		g_hPendingLogs.PushArray(log, sizeof(log));
+		return;
+	}
+
 	// -1 because the index was increase due to PushArray.
 	int arrayIndex = (g_allKbans.Length - 1);
 
 	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 	"INSERT INTO `KbRestrict_srvlogs` ("
-									... "`client_name`, `client_steamid`,"
-									... "`admin_name`, `admin_steamid`,"
-									... "`message`, `time_stamp`)"
-									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
-										info.clientName, info.clientSteamID,
-										info.adminName, info.adminSteamID,
-										message, GetTime());
-
+	Kban_FormatLogQuery(log, query, sizeof(query));
 	g_hDB.Query(OnKbanPublished, query, arrayIndex);
+}
+
+void Kban_FormatInsertQuery(Kban info, char[] query, int maxlen) {
+	g_hDB.Format(query, maxlen, 		"INSERT INTO `KbRestrict_CurrentBans` ("
+									... "`client_name`, `client_steamid`, `client_ip`,"
+									... "`admin_name`, `admin_steamid`, `reason`,"
+									... "`map`, `length`, `time_stamp_start`,"
+									... "`time_stamp_end`, `is_expired`, `is_removed`,"
+									... "`admin_name_removed`, `admin_steamid_removed`, `time_stamp_removed`,"
+									... "`reason_removed`)"
+									... "VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s',"
+									... "'%d', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s')",
+									info.clientName, info.clientSteamID, info.clientIP,
+									info.adminName, info.adminSteamID, info.reason,
+									info.map, info.length, info.time_stamp_start,
+									info.time_stamp_end, 0, 0,
+									"null", "null", 0, "null");
+}
+
+void Kban_FormatLogQuery(KbanLog log, char[] query, int maxlen) {
+	g_hDB.Format(query, maxlen, 	"INSERT INTO `KbRestrict_srvlogs` ("
+								... "`client_name`, `client_steamid`,"
+								... "`admin_name`, `admin_steamid`,"
+								... "`message`, `time_stamp`)"
+								... "VALUES ('%s', '%s', '%s', '%s', '%s', '%d')",
+									log.clientName, log.clientSteamID,
+									log.adminName, log.adminSteamID,
+									log.message, log.time_stamp);
+}
+
+// The database is still unavailable after a map change, so the client can't be
+// verified: re-apply a kban that was issued while it was down.
+void Kban_ApplyPendingKban(int client) {
+	if (g_bIsClientRestricted[client]) {
+		return;
+	}
+
+	int currentTime = GetTime();
+
+	for (int i = 0; i < g_hPendingKbans.Length; i++) {
+		Kban info;
+		g_hPendingKbans.GetArray(i, info, sizeof(info));
+
+		if (info.time_stamp_end > 0 && info.time_stamp_end <= currentTime) {
+			continue;
+		}
+
+		// Same matching as OnPostVerifyKban: SteamID, or IP for a kban without SteamID
+		bool noSteamID = (strcmp(info.clientSteamID, NOSTEAMID, false) == 0);
+		if (!(!noSteamID && strcmp(info.clientSteamID, g_sSteamIDs[client], false) == 0)
+			&& !(noSteamID && strcmp(info.clientIP, g_sIPs[client], false) == 0)) {
+			continue;
+		}
+
+		if (info.id == 0) {
+			info.id = --g_iNextSessionKbanId;
+			g_hPendingKbans.SetArray(i, info, sizeof(info));
+			g_allKbans.PushArray(info, sizeof(info));
+		}
+
+		g_bIsClientRestricted[client] = true;
+		#if defined _zr_included
+		ChangeWeaponsKnockback(client, true);
+		#endif
+		return;
+	}
+}
+
+// Writes the kbans and srvlogs entries created while the database was unavailable.
+void Kban_FlushPending() {
+	if (!g_hPendingKbans.Length && !g_hPendingLogs.Length) {
+		return;
+	}
+
+	LogMessage("[Kb-Restrict] Writing %d kban(s) and %d log(s) created while the database was unavailable.",
+		g_hPendingKbans.Length, g_hPendingLogs.Length);
+
+	char query[MAX_QUERIE_LENGTH];
+
+	for (int i = 0; i < g_hPendingKbans.Length; i++) {
+		Kban info;
+		g_hPendingKbans.GetArray(i, info, sizeof(info));
+		Kban_FormatInsertQuery(info, query, sizeof(query));
+
+		// Still in memory on this map: OnKbanAdded then fetches its real id
+		int arrayIndex = (info.id != 0 && g_allKbans != null) ? g_allKbans.FindValue(info.id) : -1;
+		if (arrayIndex != -1) {
+			g_hDB.Query(OnKbanAdded, query, arrayIndex);
+		} else {
+			g_hDB.Query(OnPendingInserted, query);
+		}
+	}
+
+	for (int i = 0; i < g_hPendingLogs.Length; i++) {
+		KbanLog log;
+		g_hPendingLogs.GetArray(i, log, sizeof(log));
+		Kban_FormatLogQuery(log, query, sizeof(query));
+		g_hDB.Query(OnPendingInserted, query);
+	}
+
+	g_hPendingKbans.Clear();
+	g_hPendingLogs.Clear();
+}
+
+void OnPendingInserted(Database db, DBResultSet results, const char[] error, any data) {
+	if(results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_INSERT, error);
+	}
 }
 
 void OnKbanPublished(Database db, DBResultSet results, const char[] error, int arrayIndex) {
