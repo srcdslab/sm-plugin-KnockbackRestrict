@@ -291,5 +291,9 @@
 		"#format" 		"{1:s}"
 		"en"			"{1} has not been verified. Please wait thirty seconds before retrying."
 	}
+	"KbanPendingDB"
+	{
+		"en"			"The database is unavailable: the {green}Kb-Restrict{white} is applied now and will be saved once the connection is back."
+	}
 
 }
