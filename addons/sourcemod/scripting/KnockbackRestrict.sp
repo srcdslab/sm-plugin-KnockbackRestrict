@@ -1305,7 +1305,7 @@ void DB_CreateTables() {
 	}
 
 	char query[MAX_QUERIE_LENGTH];
-	Transaction T_Tables = SQL_CreateTransaction();
+	Transaction T_Tables = new Transaction();
 
 	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_CurrentBans` ( \
 										`id` int(11) unsigned NOT NULL AUTO_INCREMENT, \
