@@ -21,6 +21,7 @@
 #define MAX_IP_LENGTH 16
 #define MAX_QUERIE_LENGTH 2000
 #define REASON_MAX_LENGTH 128
+#define VERIFY_MAX_RETRIES 3
 
 GlobalForward g_hKbanForward;
 GlobalForward g_hKunbanForward;
@@ -30,7 +31,8 @@ TopMenu g_hAdminMenu;
 
 int g_iClientPreviousMenu[MAXPLAYERS + 1] = {0, ...},
 	g_iClientTarget[MAXPLAYERS + 1] = {0, ...}, g_iClientTargetLength[MAXPLAYERS + 1] = {0, ...},
-	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... };
+	g_iClientKbansNumber[MAXPLAYERS + 1] = { 0, ... },
+	g_iVerifyRetries[MAXPLAYERS + 1] = { 0, ... };
 
 bool g_bKnifeModeEnabled,
 	g_bUserVerified[MAXPLAYERS + 1] = { false, ... },
@@ -330,7 +332,6 @@ public void OnMapStart() {
 	/* ARRAYLIST */
 	delete g_allKbans;
 	g_allKbans = new ArrayList(ByteCountToCells(2048));
-	g_iNextSessionKbanId = 0;
 
 	// Pending kbans lost their in-memory copy (id 0 = not in g_allKbans)
 	for (int i = 0; i < g_hPendingKbans.Length; i++) {
@@ -421,6 +422,7 @@ public void OnClientPostAdminCheck(int client) {
 
 	// Initialize client data
 	g_bUserVerified[client] = false;
+	g_iVerifyRetries[client] = 0;
 	g_bIsClientRestricted[client] = false;
 	strcopy(g_sIPs[client], sizeof(g_sIPs[]), sIP);
 	strcopy(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
@@ -484,7 +486,7 @@ stock void VerifyKbanClient(int client) {
 			(SELECT COUNT(*) FROM `KbRestrict_CurrentBans` WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_removed`=0) as kban_count, \
 			(SELECT id FROM `KbRestrict_CurrentBans` WHERE `client_ip`='%s' AND `client_steamid`='%s' AND `is_expired`=0 AND `is_removed`=0 LIMIT 1) as pending_steamid_id \
 			FROM (SELECT id, client_name, client_steamid, client_ip, admin_name, admin_steamid, reason, map, length, time_stamp_start, time_stamp_end, is_expired, is_removed \
-			FROM `KbRestrict_CurrentBans` USE INDEX (`idx_steamid_ip_status`) \
+			FROM `KbRestrict_CurrentBans` \
 			WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_expired`=0 AND `is_removed`=0 \
 			ORDER BY time_stamp_start DESC LIMIT 1) as t",
 			g_sSteamIDs[client], g_sIPs[client],
@@ -496,7 +498,7 @@ stock void VerifyKbanClient(int client) {
 			(SELECT COUNT(*) FROM `KbRestrict_CurrentBans` WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_removed`=0) as kban_count, \
 			(SELECT id FROM `KbRestrict_CurrentBans` WHERE `client_ip`='%s' AND `client_steamid`='%s' AND `is_expired`=0 AND `is_removed`=0 LIMIT 1) as pending_steamid_id \
 			FROM (SELECT id, client_name, client_steamid, client_ip, admin_name, admin_steamid, reason, map, length, time_stamp_start, time_stamp_end, is_expired, is_removed \
-			FROM `KbRestrict_CurrentBans` USE INDEX (`idx_steamid_ip_status`) \
+			FROM `KbRestrict_CurrentBans` \
 			WHERE (`client_steamid`='%s' OR `client_ip`='%s') AND `is_expired`=0 \
 			ORDER BY time_stamp_start DESC LIMIT 1) as t",
 			g_sSteamIDs[client], g_sIPs[client],
@@ -509,6 +511,13 @@ stock void VerifyKbanClient(int client) {
 void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int userid) {
 	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_SELECT, error);
+
+		// Don't leave the player unverified for the whole session
+		int client = GetClientOfUserId(userid);
+		if(client > 0 && g_iVerifyRetries[client] < VERIFY_MAX_RETRIES) {
+			g_iVerifyRetries[client]++;
+			CreateTimer(10.0, Timer_RetryVerify, userid, TIMER_FLAG_NO_MAPCHANGE);
+		}
 		return;
 	}
 
@@ -591,7 +600,7 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 		char query[MAX_QUERIE_LENGTH];
 		g_hDB.Format(query, sizeof(query), "UPDATE `KbRestrict_CurrentBans` SET `client_steamid`='%s' WHERE `id`=%d",
 			g_sSteamIDs[client], pendingSteamIDId);
-		g_hDB.Query(OnKbanAdded, query);
+		g_hDB.Query(OnUpdateClientSteamID, query);
 
 		// Also update in g_allKbans
 		for(int i = 0; i < g_allKbans.Length; i++) {
@@ -653,10 +662,25 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 	}
 }
 
+Action Timer_RetryVerify(Handle timer, int userid) {
+	int client = GetClientOfUserId(userid);
+	if(client > 0 && !g_bUserVerified[client] && !g_bIsClientRestricted[client]) {
+		VerifyKbanClient(client);
+	}
+
+	return Plugin_Stop;
+}
+
 void OnUpdateClientIP(Database db, DBResultSet results, const char[] error, int userid) {
 	if(!IsDBConnected() || results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_UPDATE, error);
 		return;
+	}
+}
+
+void OnUpdateClientSteamID(Database db, DBResultSet results, const char[] error, any data) {
+	if(results == null || error[0]) {
+		Kban_GiveError(ERROR_TYPE_UPDATE, error);
 	}
 }
 
@@ -1090,12 +1114,13 @@ void Kban_AddOfflineBan(OfflinePlayer player, int admin, int length, char[] reas
 		return;
 	}
 
-	// Edit ID purpose
-	int arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+	// Temporary id, OnKbanAdded() replaces it with the row id
+	info.id = --g_iNextSessionKbanId;
+	g_allKbans.PushArray(info, sizeof(info));
 
 	char query[MAX_QUERIE_LENGTH];
 	Kban_FormatInsertQuery(info, query, sizeof(query));
-	g_hDB.Query(OnKbanAdded, query, arrayIndex);
+	g_hDB.Query(OnKbanAdded, query, info.id);
 
 	PublishKban(info, admin, _, reason);
 }
@@ -1239,6 +1264,8 @@ void Kban_GetRowResults(int num, DBResultSet results, Kban info) {
 
 void ConnectToDB()
 {
+	// Set until the connection is up, so only one attempt is in flight
+	g_bConnectingToDB = true;
 	Database.Connect(DB_OnConnect, "KbRestrict");
 }
 
@@ -1249,23 +1276,33 @@ void DB_OnConnect(Database db, const char[] error, any data)
 {
 	if(db == null || error[0])
 	{
-		/* Failure happen. Do retry with delay */
-		if (!g_bConnectingToDB)
-		{
-			g_bConnectingToDB = true;
-			CreateTimer(15.0, DB_RetryConnection, _, TIMER_FLAG_NO_MAPCHANGE);
-			LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
-		}
-
+		/* Failure happen. Do retry with delay, g_bConnectingToDB stays set until then */
+		CreateTimer(15.0, DB_RetryConnection);
+		LogError("[Kb-Restrict] Couldn't connect to database `KbRestrict`, retrying in 15 seconds. \nError: %s", error);
 		return;
 	}
+
+	if(g_hDB != null)
+	{
+		// Already connected, don't leak a second connection
+		delete db;
+		return;
+	}
+
+	db.SetCharset(DB_CHARSET);
 
 	LogMessage("[Kb-Restrict] Successfully connected to database!");
 	g_bConnectingToDB = false;
 	g_hDB = db;
-	g_hDB.SetCharset(DB_CHARSET);
 	DB_CreateTables();
 	Kban_FlushPending();
+
+	// Verify the players that joined while the database was unavailable (or on a late load)
+	for(int i = 1; i <= MaxClients; i++) {
+		if(IsClientInGame(i) && !IsFakeClient(i) && !IsClientSourceTV(i) && !g_bUserVerified[i] && !g_bIsClientRestricted[i]) {
+			VerifyKbanClient(i);
+		}
+	}
 }
 
 bool IsDBConnected()
@@ -1273,8 +1310,10 @@ bool IsDBConnected()
 	if(g_hDB == null)
 	{
 		if (!g_bConnectingToDB)
+		{
 			LogError("[Kb-Restrict] Database connection is lost, attempting to reconnect...");
-		ConnectToDB();
+			ConnectToDB();
+		}
 		return false;
 	}
 
@@ -1289,7 +1328,7 @@ Action DB_RetryConnection(Handle timer)
 	g_bConnectingToDB = false;
 	IsDBConnected();
 
-	return Plugin_Continue;
+	return Plugin_Stop;
 }
 
 void DB_CreateTables() {
@@ -1416,7 +1455,7 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		FormatEx(adminSteamID, sizeof(adminSteamID), "Console");
 	}
 
-	if (info.id >= 0) { // negative id: Session kban, no DB row to update
+	if (info.id >= 0) { // negative id: Session kban or row not written yet, no DB row to update
 		char query[MAX_QUERIE_LENGTH];
 		if (!isExpired) {
 			g_hDB.Format(query, sizeof(query), 		"UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
@@ -1539,11 +1578,9 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		info.time_stamp_end = 0; // Permanent
 	}
 
-	int arrayIndex;
-
 	if (bSession) {
 		info.id = --g_iNextSessionKbanId; // negative id: memory-only, never a DB row
-		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+		g_allKbans.PushArray(info, sizeof(info));
 	} else if (!IsDBConnected()) {
 		// Restrict now, Kban_FlushPending() writes the kban once the database is back
 		info.id = --g_iNextSessionKbanId;
@@ -1551,12 +1588,13 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		g_hPendingKbans.PushArray(info, sizeof(info));
 		CReplyToCommand(admin, "%t", "KbanPendingDB");
 	} else {
-		// for editing id purpose
-		arrayIndex = g_allKbans.PushArray(info, sizeof(info));
+		// Temporary id, OnKbanAdded() replaces it with the row id
+		info.id = --g_iNextSessionKbanId;
+		g_allKbans.PushArray(info, sizeof(info));
 
 		char query[MAX_QUERIE_LENGTH];
 		Kban_FormatInsertQuery(info, query, sizeof(query));
-		g_hDB.Query(OnKbanAdded, query, arrayIndex);
+		g_hDB.Query(OnKbanAdded, query, info.id);
 	}
 
 	g_bIsClientRestricted[target] = true;
@@ -1712,35 +1750,52 @@ void Kban_FlushPending() {
 		g_hPendingKbans.Length, g_hPendingLogs.Length);
 
 	char query[MAX_QUERIE_LENGTH];
+	Transaction T_Pending = new Transaction();
 
 	for (int i = 0; i < g_hPendingKbans.Length; i++) {
 		Kban info;
 		g_hPendingKbans.GetArray(i, info, sizeof(info));
 		Kban_FormatInsertQuery(info, query, sizeof(query));
 
-		// Still in memory on this map: OnKbanAdded then fetches its real id
-		int arrayIndex = (info.id != 0 && g_allKbans != null) ? g_allKbans.FindValue(info.id) : -1;
-		if (arrayIndex != -1) {
-			g_hDB.Query(OnKbanAdded, query, arrayIndex);
-		} else {
-			g_hDB.Query(OnPendingInserted, query);
-		}
+		// Still in memory on this map (temporary id != 0): OnPendingInserted then sets its real id
+		T_Pending.AddQuery(query, info.id);
 	}
 
 	for (int i = 0; i < g_hPendingLogs.Length; i++) {
 		KbanLog log;
 		g_hPendingLogs.GetArray(i, log, sizeof(log));
 		Kban_FormatLogQuery(log, query, sizeof(query));
-		g_hDB.Query(OnPendingInserted, query);
+		T_Pending.AddQuery(query, 0);
 	}
+
+	g_hDB.Execute(T_Pending, OnPendingInserted, OnPendingInsertError);
 
 	g_hPendingKbans.Clear();
 	g_hPendingLogs.Clear();
 }
 
-void OnPendingInserted(Database db, DBResultSet results, const char[] error, any data) {
-	if(results == null || error[0]) {
-		Kban_GiveError(ERROR_TYPE_INSERT, error);
+void OnPendingInserted(Database db, any data, int numQueries, DBResultSet[] results, any[] queryData) {
+	for (int i = 0; i < numQueries; i++) {
+		if (queryData[i] != 0) {
+			Kban_SetKbanID(queryData[i], results[i].InsertId);
+		}
+	}
+}
+
+void OnPendingInsertError(Database db, any data, int numQueries, const char[] error, int failIndex, any[] queryData) {
+	Kban_GiveError(ERROR_TYPE_INSERT, error);
+}
+
+// Replaces the temporary id of a kban in g_allKbans with its row id
+void Kban_SetKbanID(int tempId, int id) {
+	if (g_allKbans == null) {
+		return;
+	}
+
+	// Gone if it was removed meanwhile, or if the map changed
+	int index = g_allKbans.FindValue(tempId);
+	if (index != -1) {
+		g_allKbans.Set(index, id);
 	}
 }
 
@@ -1754,25 +1809,13 @@ void OnKbanPublished(Database db, DBResultSet results, const char[] error, int a
 	}
 }
 
-void OnKbanAdded(Database db, DBResultSet results, const char[] error, int arrayIndex) {
-	if(!IsDBConnected() || results == null || error[0]) {
+void OnKbanAdded(Database db, DBResultSet results, const char[] error, int tempId) {
+	if(results == null || error[0]) {
 		Kban_GiveError(ERROR_TYPE_INSERT, error);
 		return;
 	}
 
-	Kban info;
-	// g_allKbans.GetArray(arrayIndex, info, sizeof(info));
-	if (!g_allKbans.GetArray(arrayIndex, info, sizeof(info))) {
-		LogError("Failed to retrieve element at index %d from g_allKbans.", arrayIndex);
-		return;
-	}
-
-	char query[MAX_QUERIE_LENGTH];
-	g_hDB.Format(query, sizeof(query), 		"SELECT `id` FROM `KbRestrict_CurrentBans` WHERE"
-										... "`client_steamid`='%s' AND `client_ip`='%s' AND `is_expired`=0 AND `is_removed`=0",
-										info.clientSteamID, info.clientIP);
-
-	g_hDB.Query(OnGetKbanID, query, arrayIndex);
+	Kban_SetKbanID(tempId, results.InsertId);
 }
 
 int Kban_CheckKbanAdminAccess(int client, int time) {
@@ -1799,22 +1842,6 @@ int Kban_CheckKbanAdminAccess(int client, int time) {
 		time = cvar.IntValue;
 
 	return time;
-}
-
-void OnGetKbanID(Database db, DBResultSet results, const char[] error, int arrayIndex) {
-	if(!IsDBConnected() || results == null || error[0]) {
-		Kban_GiveError(ERROR_TYPE_SELECT, error);
-		return;
-	}
-
-	Kban info;
-	g_allKbans.GetArray(arrayIndex, info, sizeof(info));
-
-	if(results.FetchRow()) {
-		info.id = results.FetchInt(0);
-	}
-
-	g_allKbans.SetArray(arrayIndex, info, sizeof(info));
 }
 
 bool Kban_GetKban(KbanGetType type, Kban info, int id = -1, const char[] steamID = "", const char[] ip = "") {

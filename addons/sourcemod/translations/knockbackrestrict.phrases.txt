@@ -296,4 +296,9 @@
 		"en"			"The database is unavailable: the {green}Kb-Restrict{white} is applied now and will be saved once the connection is back."
 	}
 
+	"KunbanDBUnavailable"
+	{
+		"en"			"The database is unavailable: offline {green}Kb-UnRestrict{white} can't be saved, try again later."
+	}
+
 }

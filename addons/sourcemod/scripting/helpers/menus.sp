@@ -510,6 +510,11 @@ int Menu_KbanInfoMenu(Menu menu, MenuAction action, int param1, int param2) {
 			if(target != -1) {
 				Kban_RemoveBan(target, param1, sReason);
 			} else {
+				if(!IsDBConnected()) {
+					CPrintToChat(param1, "%t", "KunbanDBUnavailable");
+					return 0;
+				}
+
 				char query[MAX_QUERIE_LENGTH];
 				g_hDB.Format(query, sizeof(query),  "UPDATE `KbRestrict_CurrentBans` SET `is_expired`=1, `is_removed`=1,"
 												... "`admin_name_removed`='%s', `admin_steamid_removed`='%s', `reason_removed`='%s',"
