@@ -1192,8 +1192,8 @@ Action Command_CheckKbStatus(int client, int args) {
 		}
 
 		default: {
-			char sTimeLeft[32];
-			CheckPlayerExpireTime(info.time_stamp_end - GetTime(), sTimeLeft, sizeof(sTimeLeft));
+			char sTimeLeft[64];
+			CheckPlayerExpireTime(client, info.time_stamp_end - GetTime(), sTimeLeft, sizeof(sTimeLeft));
 			CReplyToCommand(client, "%t", "RestrictTimeLeft", g_sName[target], sTimeLeft);
 		}
 	}
@@ -1203,22 +1203,24 @@ Action Command_CheckKbStatus(int client, int args) {
 	return Plugin_Handled;
 }
 
-stock void CheckPlayerExpireTime(int lefttime, char[] TimeLeft, int maxlength) {
+stock void CheckPlayerExpireTime(int client, int lefttime, char[] TimeLeft, int maxlength) {
 	if(lefttime > -1)
 	{
-		if(lefttime < 60) // 60 secs
-			FormatEx(TimeLeft, maxlength, "%02i %s", lefttime, "Seconds");
-		else if(lefttime > 3600 && lefttime <= 3660) // 1 Hour
-			FormatEx(TimeLeft, maxlength, "%i %s %02i %s", lefttime / 3600, "Hour", (lefttime / 60) % 60, "Minutes");
-		else if(lefttime > 3660 && lefttime < 86400) // 2 Hours or more
-			FormatEx(TimeLeft, maxlength, "%i %s %02i %s", lefttime / 3600, "Hours", (lefttime / 60) % 60, "Minutes");
-		else if(lefttime > 86400 && lefttime <= 172800) // 1 Day
-			FormatEx(TimeLeft, maxlength, "%i %s %02i %s", lefttime / 86400, "Day", (lefttime / 3600) % 24, "Hours");
-		else if(lefttime > 172800) // 2 Days or more
-			FormatEx(TimeLeft, maxlength, "%i %s %02i %s", lefttime / 86400, "Days", (lefttime / 3600) % 24, "Hours");
-		else // Less than 1 Hour
-			FormatEx(TimeLeft, maxlength, "%i %s %02i %s", lefttime / 60, "Minutes", lefttime % 60, "Seconds");
+		if(lefttime < 60) // Less than 1 Minute
+			FormatEx(TimeLeft, maxlength, "%T", lefttime == 1 ? "Second" : "Seconds", client, lefttime);
+		else if(lefttime < 3600) // Less than 1 Hour
+			FormatTimeLeft(client, TimeLeft, maxlength, lefttime / 60, "Minute", "Minutes", lefttime % 60, "Second", "Seconds");
+		else if(lefttime < 86400) // Less than 1 Day
+			FormatTimeLeft(client, TimeLeft, maxlength, lefttime / 3600, "Hour", "Hours", (lefttime / 60) % 60, "Minute", "Minutes");
+		else // 1 Day or more
+			FormatTimeLeft(client, TimeLeft, maxlength, lefttime / 86400, "Day", "Days", (lefttime / 3600) % 24, "Hour", "Hours");
 	}
+}
+
+stock void FormatTimeLeft(int client, char[] TimeLeft, int maxlength, int major, const char[] sMajorSingle, const char[] sMajorPlural, int minor, const char[] sMinorSingle, const char[] sMinorPlural) {
+	FormatEx(TimeLeft, maxlength, "%T", major == 1 ? sMajorSingle : sMajorPlural, client, major);
+	if(minor > 0)
+		Format(TimeLeft, maxlength, "%s %T", TimeLeft, minor == 1 ? sMinorSingle : sMinorPlural, client, minor);
 }
 
 //----------------------------------------------------------------------------------------------------
