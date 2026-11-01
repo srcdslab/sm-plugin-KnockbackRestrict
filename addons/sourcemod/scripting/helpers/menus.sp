@@ -693,7 +693,7 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 				if (IsValidClient(target))
 					KR_DisplayLengthsMenu(param1, target, Menu_OnLengthClick);
 				else
-					CPrintToChat(param1, "%s %T", KR_Tag, "PlayerNotValid", param1);
+					CPrintToChat(param1, "%t", "PlayerNotValid");
 			}
 		}
 		
@@ -713,7 +713,7 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 						g_bIsClientTypingReason[param1] = true;
 					}
 					else
-						CPrintToChat(param1, "%t.", "AlreadyKBanned");
+						CPrintToChat(param1, "%t", "AlreadyKBanned");
 				}
 				else
 					CPrintToChat(param1, "%t", "PlayerNotValid");
