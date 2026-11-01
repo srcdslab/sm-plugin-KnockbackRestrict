@@ -91,7 +91,7 @@ public void ItemHandler_OfflineKban(TopMenu topmenu, TopMenuAction action, TopMe
 //----------------------------------------------------------------------------------------------------
 void Kban_OpenMainMenu(int client) {
 	Menu menu = new Menu(Menu_MainMenu);
-	menu.SetTitle("[Kb-Restrict] Kban Main Menu");
+	menu.SetTitle("[Kb-Restrict] %T", "Kban Main Menu", client);
 
 	char sBuffer[128];
 	FormatEx(sBuffer, sizeof(sBuffer), "%t", "KBan a player");
@@ -661,7 +661,7 @@ void DisplayReasons_Menu(int client)
 	FormatEx(sBuffer, sizeof(sBuffer), "%s", "Trolling on purpose", client);
 	menu.AddItem(sBuffer, sBuffer);
 	
-	FormatEx(sBuffer, sizeof(sBuffer), "%s", "Custom Reason", client);
+	FormatEx(sBuffer, sizeof(sBuffer), "%T", "Custom Reason", client);
 	menu.AddItem("4", sBuffer);
 	
 	menu.Display(client, MENU_TIME_FOREVER);
@@ -735,7 +735,7 @@ int Menu_Reasons(Menu menu, MenuAction action, int param1, int param2)
 
 void Kban_OpenOfflineKbanMenu(int client, const char[] arg = "") {
 	Menu menu = new Menu(Menu_OfflineKbanMenu);
-	menu.SetTitle("[Kb-Restrict] Offline Kban");
+	menu.SetTitle("[Kb-Restrict] %T", "Offline Kban", client);
 	
 	bool found = false;
 	for(int i = 0; i < g_OfflinePlayers.Length; i++) {
@@ -756,7 +756,9 @@ void Kban_OpenOfflineKbanMenu(int client, const char[] arg = "") {
 	}
 	
 	if(!found) {
-		menu.AddItem("a", "No Offline Players", ITEMDRAW_DISABLED);
+		char sNoPlayers[64];
+		FormatEx(sNoPlayers, sizeof(sNoPlayers), "%T", "No Offline Players", client);
+		menu.AddItem("a", sNoPlayers, ITEMDRAW_DISABLED);
 	}
 	
 	menu.ExitButton = true;
@@ -828,7 +830,7 @@ public Action OnClientSayCommand(int client, const char[] command, const char[] 
 		StripQuotes(buffer);
 		
 		if(strlen(buffer) <= 3) {
-			CPrintToChat(client, "Reason has to be over 3 characters!");
+			CPrintToChat(client, "%t", "Reason too short");
 			return Plugin_Handled;
 		}
 		
