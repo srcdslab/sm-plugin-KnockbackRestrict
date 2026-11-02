@@ -861,7 +861,7 @@ Action Command_KbanList(int client, int args) {
 Action Command_KbRestrict(int client, int args) {
 
 	if(args < 1) {
-		CReplyToCommand(client, "Usage: sm_kban <player> <duration> <reason>");
+		CReplyToCommand(client, "%t", "Usage kban");
 		Kban_OpenMainMenu(client);
 		return Plugin_Handled;
 	}
@@ -931,7 +931,7 @@ Action Command_KbRestrict(int client, int args) {
 Action Command_KbUnRestrict(int client, int args) {
 	if(args < 1)
 	{
-		CReplyToCommand(client, "Usage: sm_kunban <player> <reason>.");
+		CReplyToCommand(client, "%t", "Usage kunban");
 		Kban_OpenMainMenu(client);
 		return Plugin_Handled;
 	}
@@ -1001,7 +1001,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 		}
 
 		Kban_OpenOfflineKbanMenu(client);
-		CReplyToCommand(client, "Usage: sm_koban <player> <time> <reason>");
+		CReplyToCommand(client, "%t", "Usage koban");
 		return Plugin_Handled;
 	}
 
@@ -1047,7 +1047,7 @@ Action Command_OfflineKbRestrict(int client, int args) {
 		Kban_OpenOfflineKbanMenu(client, arg);
 		return Plugin_Handled;
 	} else if(arrays <= 0) {
-		CReplyToCommand(client, "No matched client was found.");
+		CReplyToCommand(client, "%t", "No matched client");
 		return Plugin_Handled;
 	}
 

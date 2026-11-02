@@ -713,4 +713,91 @@
 		"chi"			"数据库不可用：离线 {green}Kb-UnRestrict{white} 无法保存，请稍后再试。"
 	}
 
+	"Usage kban"
+	{
+		"en"		"Usage: sm_kban <player> <duration> <reason>"
+		"fr"		"Utilisation : sm_kban <joueur> <durée> <raison>"
+		"ru"		"Использование: sm_kban <игрок> <длительность> <причина>"
+		"es"		"Uso: sm_kban <jugador> <duración> <motivo>"
+		"de"		"Verwendung: sm_kban <Spieler> <Dauer> <Grund>"
+		"pt"		"Uso: sm_kban <jogador> <duração> <motivo>"
+		"chi"		"用法：sm_kban <玩家> <时长> <原因>"
+	}
+
+	"Usage kunban"
+	{
+		"en"		"Usage: sm_kunban <player> <reason>."
+		"fr"		"Utilisation : sm_kunban <joueur> <raison>."
+		"ru"		"Использование: sm_kunban <игрок> <причина>."
+		"es"		"Uso: sm_kunban <jugador> <motivo>."
+		"de"		"Verwendung: sm_kunban <Spieler> <Grund>."
+		"pt"		"Uso: sm_kunban <jogador> <motivo>."
+		"chi"		"用法：sm_kunban <玩家> <原因>。"
+	}
+
+	"Usage koban"
+	{
+		"en"		"Usage: sm_koban <player> <time> <reason>"
+		"fr"		"Utilisation : sm_koban <joueur> <durée> <raison>"
+		"ru"		"Использование: sm_koban <игрок> <время> <причина>"
+		"es"		"Uso: sm_koban <jugador> <tiempo> <motivo>"
+		"de"		"Verwendung: sm_koban <Spieler> <Zeit> <Grund>"
+		"pt"		"Uso: sm_koban <jogador> <tempo> <motivo>"
+		"chi"		"用法：sm_koban <玩家> <时间> <原因>"
+	}
+
+	"No matched client"
+	{
+		"en"		"No matched client was found."
+		"fr"		"Aucun joueur correspondant trouvé."
+		"ru"		"Подходящий игрок не найден."
+		"es"		"No se encontró ningún jugador coincidente."
+		"de"		"Kein passender Spieler gefunden."
+		"pt"		"Nenhum jogador correspondente encontrado."
+		"chi"		"未找到匹配的玩家。"
+	}
+
+	"Kban Main Menu"
+	{
+		"en"		"Kban Main Menu"
+		"fr"		"Menu principal KBan"
+		"ru"		"Главное меню KBan"
+		"es"		"Menú principal de KBan"
+		"de"		"KBan-Hauptmenü"
+		"pt"		"Menu principal do KBan"
+		"chi"		"KBan 主菜单"
+	}
+
+	"No Offline Players"
+	{
+		"en"		"No Offline Players"
+		"fr"		"Aucun joueur hors ligne"
+		"ru"		"Нет оффлайн-игроков"
+		"es"		"No hay jugadores desconectados"
+		"de"		"Keine Offline-Spieler"
+		"pt"		"Nenhum jogador offline"
+		"chi"		"没有离线玩家"
+	}
+
+	"Reason too short"
+	{
+		"en"		"Reason has to be over 3 characters!"
+		"fr"		"La raison doit faire plus de 3 caractères !"
+		"ru"		"Причина должна быть длиннее 3 символов!"
+		"es"		"¡El motivo debe tener más de 3 caracteres!"
+		"de"		"Der Grund muss länger als 3 Zeichen sein!"
+		"pt"		"O motivo precisa ter mais de 3 caracteres!"
+		"chi"		"原因必须超过 3 个字符！"
+	}
+
+	"Custom Reason"
+	{
+		"en"		"Custom Reason"
+		"fr"		"Raison personnalisée"
+		"ru"		"Своя причина"
+		"es"		"Motivo personalizado"
+		"de"		"Eigener Grund"
+		"pt"		"Motivo personalizado"
+		"chi"		"自定义原因"
+	}
 }
