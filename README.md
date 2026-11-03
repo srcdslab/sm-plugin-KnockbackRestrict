@@ -6,6 +6,32 @@
 
 You can find the web panel [here](https://github.com/srcdslab/kbans-web)
 
+# Database
+
+The plugin uses the `KbRestrict` entry of `addons/sourcemod/configs/databases.cfg` and creates its tables on its own. MySQL (or MariaDB) and SQLite are both supported.
+
+```
+"KbRestrict"
+{
+	"driver"	"mysql"
+	"host"		"127.0.0.1"
+	"database"	"kbrestrict"
+	"user"		"user"
+	"pass"		"password"
+	"port"		"3306"
+}
+```
+
+```
+"KbRestrict"
+{
+	"driver"	"sqlite"
+	"database"	"kbrestrict"
+}
+```
+
+The web panel reads the MySQL tables: use MySQL if you need it. The migrations below are for MySQL only, a SQLite database is created with the current schema.
+
 # Migration
 ## 3.3.4 to 3.4.0
 
