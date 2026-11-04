@@ -1338,15 +1338,26 @@ void DB_CreateTables() {
 		return;
 	}
 
-	char driver[10];
+	char driver[16];
 	g_hDB.Driver.GetIdentifier(driver, sizeof(driver));
-	if(strcmp(driver, "mysql", false) != 0) {
-		LogError("[Kb-Restrict] drivers other than mysql are not supported.");
+
+	Transaction T_Tables = new Transaction();
+
+	if(strcmp(driver, "mysql", false) == 0) {
+		DB_AddMySQLTables(T_Tables);
+	} else if(strcmp(driver, "sqlite", false) == 0) {
+		DB_AddSQLiteTables(T_Tables);
+	} else {
+		delete T_Tables;
+		LogError("[Kb-Restrict] Unsupported database driver \"%s\", only mysql and sqlite are supported.", driver);
 		return;
 	}
 
+	g_hDB.Execute(T_Tables, OnCreateTablesSuccess, OnCreateTablesError);
+}
+
+void DB_AddMySQLTables(Transaction T_Tables) {
 	char query[MAX_QUERIE_LENGTH];
-	Transaction T_Tables = new Transaction();
 
 	g_hDB.Format(query, sizeof(query), "CREATE TABLE IF NOT EXISTS `KbRestrict_CurrentBans` ( \
 										`id` int(11) unsigned NOT NULL AUTO_INCREMENT, \
@@ -1409,8 +1420,54 @@ void DB_CreateTables() {
 	);
 
 	T_Tables.AddQuery(query);
+}
 
-	g_hDB.Execute(T_Tables, OnCreateTablesSuccess, OnCreateTablesError);
+// Same columns as the MySQL tables. SQLite index names are shared by the whole database file
+// (which other plugins may use too), so they carry the plugin prefix.
+void DB_AddSQLiteTables(Transaction T_Tables) {
+	T_Tables.AddQuery("CREATE TABLE IF NOT EXISTS `KbRestrict_CurrentBans` ( \
+						`id` INTEGER PRIMARY KEY AUTOINCREMENT, \
+						`client_name` TEXT NOT NULL, \
+						`client_steamid` TEXT NOT NULL, \
+						`client_ip` TEXT NOT NULL, \
+						`admin_name` TEXT NOT NULL, \
+						`admin_steamid` TEXT NOT NULL, \
+						`reason` TEXT NOT NULL, \
+						`map` TEXT NOT NULL, \
+						`length` INTEGER NOT NULL, \
+						`time_stamp_start` INTEGER NOT NULL, \
+						`time_stamp_end` INTEGER NOT NULL, \
+						`is_expired` INTEGER NOT NULL, \
+						`is_removed` INTEGER NOT NULL, \
+						`time_stamp_removed` INTEGER NOT NULL, \
+						`admin_name_removed` TEXT NOT NULL, \
+						`admin_steamid_removed` TEXT NOT NULL, \
+						`reason_removed` TEXT NOT NULL);");
+
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_steamid_search` ON `KbRestrict_CurrentBans` (`client_steamid`);");
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_ip_search` ON `KbRestrict_CurrentBans` (`client_ip`);");
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_admin_steamid` ON `KbRestrict_CurrentBans` (`admin_steamid`);");
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_expiry_sort` ON `KbRestrict_CurrentBans` (`time_stamp_start`, `time_stamp_end`);");
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_status` ON `KbRestrict_CurrentBans` (`is_expired`, `is_removed`);");
+	T_Tables.AddQuery("CREATE INDEX IF NOT EXISTS `KbRestrict_idx_steamid_ip_status` ON `KbRestrict_CurrentBans` (`client_steamid`, `client_ip`, `is_expired`, `is_removed`);");
+
+	T_Tables.AddQuery("CREATE TABLE IF NOT EXISTS `KbRestrict_srvlogs` ( \
+						`id` INTEGER PRIMARY KEY AUTOINCREMENT, \
+						`message` TEXT NOT NULL, \
+						`admin_name` TEXT NOT NULL, \
+						`admin_steamid` TEXT NOT NULL, \
+						`client_name` TEXT NOT NULL, \
+						`client_steamid` TEXT NOT NULL, \
+						`time_stamp` INTEGER NOT NULL);");
+
+	T_Tables.AddQuery("CREATE TABLE IF NOT EXISTS `KbRestrict_weblogs` ( \
+						`id` INTEGER PRIMARY KEY AUTOINCREMENT, \
+						`message` TEXT NOT NULL, \
+						`admin_name` TEXT NOT NULL, \
+						`admin_steamid` TEXT NOT NULL, \
+						`client_name` TEXT NOT NULL, \
+						`client_steamid` TEXT NOT NULL, \
+						`time_stamp` INTEGER NOT NULL);");
 }
 
 void OnCreateTablesSuccess(Database db, any data, int numQueries, DBResultSet[] results, any[] queryData) {
