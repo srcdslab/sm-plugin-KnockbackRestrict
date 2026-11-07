@@ -40,7 +40,7 @@ This repository contains **KnockbackRestrict**, a SourceMod plugin for Source en
 
 ### 2. Include File (`KnockbackRestrict.inc`)
 - **Native functions**: `KR_BanClient`, `KR_UnBanClient`, `KR_ClientStatus`, etc.
-- **Forwards**: `KR_OnClientKbanned`, `KR_OnClientKunbanned`
+- **Forwards**: `KR_OnClientKbanned`, `KR_OnClientKunbanned`, `KR_OnClientStatusChanged`
 - **Version**: Current version is 4.0.2 (defined as constants)
 
 ### 3. Helper Modules (`helpers/menus.sp`)
@@ -193,6 +193,9 @@ forward void KR_OnClientKbanned(int client, int admin, int length, const char[] 
 
 // Called when player's knockback ban is removed
 forward void KR_OnClientKunbanned(int client, int admin, const char[] reason, int kbansNumber);
+
+// Called whenever the status returned by KR_ClientStatus changes
+forward void KR_OnClientStatusChanged(int client, bool restricted);
 ```
 
 ## Performance Considerations
