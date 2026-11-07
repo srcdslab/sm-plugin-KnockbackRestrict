@@ -25,6 +25,7 @@
 
 GlobalForward g_hKbanForward;
 GlobalForward g_hKunbanForward;
+GlobalForward g_hStatusChangedForward;
 PrivateForward g_hLengthsMenuForward;
 
 TopMenu g_hAdminMenu;
@@ -241,6 +242,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	/* Forward */
 	g_hKbanForward 		= new GlobalForward("KR_OnClientKbanned", ET_Ignore, Param_Cell, Param_Cell, Param_Cell, Param_String, Param_Cell);
 	g_hKunbanForward 	= new GlobalForward("KR_OnClientKunbanned", ET_Ignore, Param_Cell, Param_Cell, Param_String, Param_Cell);
+	g_hStatusChangedForward = new GlobalForward("KR_OnClientStatusChanged", ET_Ignore, Param_Cell, Param_Cell);
 	g_hLengthsMenuForward = new PrivateForward(ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 
 	return APLRes_Success;
@@ -285,6 +287,21 @@ int Native_KR_UnBanClient(Handle plugin, int params) {
 
 	Kban_RemoveBan(client, admin, reason, false);
 	return 1;
+}
+
+// Every change of g_bIsClientRestricted goes through here, so KR_OnClientStatusChanged
+// also covers kbans loaded from the database, which fire no KR_OnClientKbanned.
+void Kban_SetClientRestricted(int client, bool restricted) {
+	if (g_bIsClientRestricted[client] == restricted) {
+		return;
+	}
+
+	g_bIsClientRestricted[client] = restricted;
+
+	Call_StartForward(g_hStatusChangedForward);
+	Call_PushCell(client);
+	Call_PushCell(restricted);
+	Call_Finish();
 }
 
 int Native_KR_ClientStatus(Handle plugin, int params) {
@@ -423,7 +440,7 @@ public void OnClientPostAdminCheck(int client) {
 	// Initialize client data
 	g_bUserVerified[client] = false;
 	g_iVerifyRetries[client] = 0;
-	g_bIsClientRestricted[client] = false;
+	Kban_SetClientRestricted(client, false);
 	strcopy(g_sIPs[client], sizeof(g_sIPs[]), sIP);
 	strcopy(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), sSteamID);
 	strcopy(g_sName[client], sizeof(g_sName[]), sName);
@@ -618,7 +635,7 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 	g_iClientKbansNumber[client] = kbanCount;
 
 	if(isKbanned) {
-		g_bIsClientRestricted[client] = true;
+		Kban_SetClientRestricted(client, true);
 
 		#if defined _zr_included
 		ChangeWeaponsKnockback(client, true);
@@ -628,7 +645,7 @@ void OnPostVerifyKban(Database db, DBResultSet results, const char[] error, int 
 		// Remove the redundant type check that was preventing proper synchronization
 		g_allKbans.PushArray(tempInfo, sizeof(tempInfo));
 	} else {
-		g_bIsClientRestricted[client] = false;
+		Kban_SetClientRestricted(client, false);
 
 		#if defined _zr_included
 		ChangeWeaponsKnockback(client, false);
@@ -710,7 +727,7 @@ public void OnClientDisconnect(int client) {
 	FormatEx(g_sSteamIDs[client], sizeof(g_sSteamIDs[]), "");
 	FormatEx(g_sName[client], sizeof(g_sName[]), "");
 	FormatEx(g_sIPs[client], sizeof(g_sIPs[]), "");
-	g_bIsClientRestricted[client] = false;
+	Kban_SetClientRestricted(client, false);
 	g_bUserVerified[client] = false;
 	g_iClientKbansNumber[client] = 0;
 }
@@ -1544,7 +1561,7 @@ stock void Kban_RemoveBan(int target, int admin, const char[] reason, bool isExp
 		}
 	}
 
-	g_bIsClientRestricted[target] = false;
+	Kban_SetClientRestricted(target, false);
 	#if defined _zr_included
 	ChangeWeaponsKnockback(target, false);
 	#endif
@@ -1656,7 +1673,7 @@ void Kban_AddBan(int target, int admin, int length, char[] reason) {
 		g_hDB.Query(OnKbanAdded, query, info.id);
 	}
 
-	g_bIsClientRestricted[target] = true;
+	Kban_SetClientRestricted(target, true);
 	#if defined _zr_included
 	ChangeWeaponsKnockback(target, true);
 	#endif
@@ -1791,7 +1808,7 @@ void Kban_ApplyPendingKban(int client) {
 			g_allKbans.PushArray(info, sizeof(info));
 		}
 
-		g_bIsClientRestricted[client] = true;
+		Kban_SetClientRestricted(client, true);
 		#if defined _zr_included
 		ChangeWeaponsKnockback(client, true);
 		#endif

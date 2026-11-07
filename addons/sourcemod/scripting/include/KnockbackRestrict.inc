@@ -12,7 +12,7 @@
 #define _KnockbackRestrict_included_
 
 #define KR_V_MAJOR   "4"
-#define KR_V_MINOR   "4"
+#define KR_V_MINOR   "5"
 #define KR_V_PATCH   "0"
 
 #define KR_VERSION   KR_V_MAJOR..."."...KR_V_MINOR..."."...KR_V_PATCH
@@ -108,3 +108,16 @@ forward void KR_OnClientKbanned(int client, int admin, int length, const char[] 
  * @noreturn
  */
 forward void KR_OnClientKunbanned(int client, int admin, const char[] reason, int kbansNumber);
+
+/**
+ * Called whenever the value returned by KR_ClientStatus changes for a client, whatever
+ * the reason: kban, unban, expiration, kban loaded from the database, disconnection.
+ *
+ * Unlike KR_OnClientKbanned, it also fires for a kban that already existed when the
+ * client connected, so use it to keep a copy of the status in another plugin.
+ *
+ * @param client        Client index
+ * @param restricted    New status of the client
+ * @noreturn
+ */
+forward void KR_OnClientStatusChanged(int client, bool restricted);
