@@ -10,6 +10,12 @@
 		"de"		"{white}{1} {red}hat {white}{2} {red}für {3} Minuten eingeschränkt.\n{4} Grund: {5}."
 		"pt"		"{white}{1} {red}restringiu {white}{2} {red}por {3} minutos.\n{4} Motivo: {5}."
 		"chi"		"{white}{1} {red}限制了 {white}{2} {red}{3} 分钟。\n{4} 原因：{5}。"
+		"pl"		"{white}{1} {red}ograniczył {white}{2} {red}na {3} min.\n{4} Powód: {5}."
+		"tr"		"{white}{1} {white}{2} {red}oyuncusunu {3} dakika boyunca kısıtladı.\n{4} Sebep: {5}."
+		"it"		"{white}{1} {red}ha limitato {white}{2} {red}per {3} minuti.\n{4} Motivo: {5}."
+		"ua"		"{white}{1} {red}обмежив {white}{2} {red}на {3} хв.\n{4} Причина: {5}."
+		"zho"		"{white}{1} {red}限制了 {white}{2} {red}{3} 分鐘。\n{4} 原因：{5}。"
+		"cze"		"{white}{1} {red}omezil hráče {white}{2} {red}na {3} min.\n{4} Důvod: {5}."
 	}
     "RestrictedOffline"
 	{
@@ -21,6 +27,12 @@
 		"de"		"{white}{1} {red}hat {white}{2}[{olive}Offline{white}] {red}für {3} Minuten eingeschränkt.\n{4} Grund: {5}."
 		"pt"		"{white}{1} {red}restringiu {white}{2}[{olive}Offline{white}] {red}por {3} minutos.\n{4} Motivo: {5}."
 		"chi"		"{white}{1} {red}限制了 {white}{2}[{olive}离线{white}] {red}{3} 分钟。\n{4} 原因：{5}。"
+		"pl"		"{white}{1} {red}ograniczył {white}{2}[{olive}Offline{white}] {red}na {3} min.\n{4} Powód: {5}."
+		"tr"		"{white}{1} {white}{2}[{olive}Çevrimdışı{white}] {red}oyuncusunu {3} dakika boyunca kısıtladı.\n{4} Sebep: {5}."
+		"it"		"{white}{1} {red}ha limitato {white}{2}[{olive}Offline{white}] {red}per {3} minuti.\n{4} Motivo: {5}."
+		"ua"		"{white}{1} {red}обмежив {white}{2}[{olive}Офлайн{white}] {red}на {3} хв.\n{4} Причина: {5}."
+		"zho"		"{white}{1} {red}限制了 {white}{2}[{olive}離線{white}] {red}{3} 分鐘。\n{4} 原因：{5}。"
+		"cze"		"{white}{1} {red}omezil hráče {white}{2}[{olive}Offline{white}] {red}na {3} min.\n{4} Důvod: {5}."
 	}
 	"RestrictedPerma"
 	{
@@ -32,6 +44,12 @@
 		"de"		"{white}{1} {red}hat {white}{2} {red}permanent eingeschränkt.\n{3} Grund: {4}."
 		"pt"		"{white}{1} {red}restringiu {white}{2} {red}permanentemente.\n{3} Motivo: {4}."
 		"chi"		"{white}{1} {red}永久限制了 {white}{2}{red}。\n{3} 原因：{4}。"
+		"pl"		"{white}{1} {red}ograniczył {white}{2} {red}na stałe.\n{3} Powód: {4}."
+		"tr"		"{white}{1} {white}{2} {red}oyuncusunu kalıcı olarak kısıtladı.\n{3} Sebep: {4}."
+		"it"		"{white}{1} {red}ha limitato {white}{2} {red}in modo permanente.\n{3} Motivo: {4}."
+		"ua"		"{white}{1} {red}обмежив {white}{2} {red}назавжди.\n{3} Причина: {4}."
+		"zho"		"{white}{1} {red}永久限制了 {white}{2}{red}。\n{3} 原因：{4}。"
+		"cze"		"{white}{1} {red}omezil hráče {white}{2} {red}trvale.\n{3} Důvod: {4}."
 	}
     "RestrictedPermaOffline"
 	{
@@ -43,6 +61,12 @@
 		"de"		"{white}{1} {red}hat {white}{2}[{olive}Offline{white}] {red}permanent eingeschränkt.\n{3} Grund: {4}."
 		"pt"		"{white}{1} {red}restringiu {white}{2}[{olive}Offline{white}] {red}permanentemente.\n{3} Motivo: {4}."
 		"chi"		"{white}{1} {red}永久限制了 {white}{2}[{olive}离线{white}]{red}。\n{3} 原因：{4}。"
+		"pl"		"{white}{1} {red}ograniczył {white}{2}[{olive}Offline{white}] {red}na stałe.\n{3} Powód: {4}."
+		"tr"		"{white}{1} {white}{2}[{olive}Çevrimdışı{white}] {red}oyuncusunu kalıcı olarak kısıtladı.\n{3} Sebep: {4}."
+		"it"		"{white}{1} {red}ha limitato {white}{2}[{olive}Offline{white}] {red}in modo permanente.\n{3} Motivo: {4}."
+		"ua"		"{white}{1} {red}обмежив {white}{2}[{olive}Офлайн{white}] {red}назавжди.\n{3} Причина: {4}."
+		"zho"		"{white}{1} {red}永久限制了 {white}{2}[{olive}離線{white}]{red}。\n{3} 原因：{4}。"
+		"cze"		"{white}{1} {red}omezil hráče {white}{2}[{olive}Offline{white}] {red}trvale.\n{3} Důvod: {4}."
 	}
 	"RestrictedTemp"
 	{
@@ -54,6 +78,12 @@
 		"de"		"{white}{1} {red}hat {white}{2} {red}vorübergehend eingeschränkt.\n{3} Grund: {4}."
 		"pt"		"{white}{1} {red}restringiu {white}{2} {red}temporariamente.\n{3} Motivo: {4}."
 		"chi"		"{white}{1} {red}临时限制了 {white}{2}{red}。\n{3} 原因：{4}。"
+		"pl"		"{white}{1} {red}tymczasowo ograniczył {white}{2}{red}.\n{3} Powód: {4}."
+		"tr"		"{white}{1} {white}{2} {red}oyuncusunu geçici olarak kısıtladı.\n{3} Sebep: {4}."
+		"it"		"{white}{1} {red}ha limitato {white}{2} {red}temporaneamente.\n{3} Motivo: {4}."
+		"ua"		"{white}{1} {red}тимчасово обмежив {white}{2}{red}.\n{3} Причина: {4}."
+		"zho"		"{white}{1} {red}臨時限制了 {white}{2}{red}。\n{3} 原因：{4}。"
+		"cze"		"{white}{1} {red}dočasně omezil hráče {white}{2}{red}.\n{3} Důvod: {4}."
 	}
 	"UnRestricted"
 	{
@@ -65,6 +95,12 @@
 		"de"		"{white}{1} {red}hat die Einschränkung von {white}{2} {red}aufgehoben.\n{3} Grund: {4}."
 		"pt"		"{white}{1} {red}removeu a restrição de {white}{2}.\n{3} Motivo: {4}."
 		"chi"		"{white}{1} {red}解除了对 {white}{2} {red}的限制。\n{3} 原因：{4}。"
+		"pl"		"{white}{1} {red}zdjął ograniczenie z {white}{2}{red}.\n{3} Powód: {4}."
+		"tr"		"{white}{1} {white}{2} {red}oyuncusunun kısıtlamasını kaldırdı.\n{3} Sebep: {4}."
+		"it"		"{white}{1} {red}ha rimosso la limitazione a {white}{2}{red}.\n{3} Motivo: {4}."
+		"ua"		"{white}{1} {red}зняв обмеження з {white}{2}{red}.\n{3} Причина: {4}."
+		"zho"		"{white}{1} {red}解除了对 {white}{2} {red}的限制。\n{3} 原因：{4}。"
+		"cze"		"{white}{1} {red}zrušil omezení hráči {white}{2}{red}.\n{3} Důvod: {4}."
 	}
 	"AlreadyKBanned"
 	{
@@ -75,6 +111,12 @@
 		"de"		"Das angegebene Ziel ist bereits {green}Kb-eingeschränkt{white}."
 		"pt"		"O alvo especificado já está {green}Kb-Restrito{white}."
 		"chi"		"指定的目标已被{green}Kb-Restrict{white}。"
+		"pl"		"Wybrany gracz jest już {green}Kb-Restricted{white}."
+		"tr"		"Belirtilen oyuncu zaten {green}Kb-Restricted{white}."
+		"it"		"Il giocatore indicato è già {green}Kb-Restricted{white}."
+		"ua"		"Вказаний гравець уже {green}Kb-Restricted{white}."
+		"zho"		"指定的目標已被 {green}Kb-Restricted{white}。"
+		"cze"		"Zadaný hráč už je {green}Kb-Restricted{white}."
 	}
 	"AlreadyKUnbanned"
 	{
@@ -85,6 +127,12 @@
 		"de"		"Das angegebene Ziel ist nicht {green}Kb-eingeschränkt{white}."
 		"pt"		"O alvo especificado não está {green}Kb-Restrito{white}."
 		"chi"		"指定的目标未被{green}Kb-Restrict{white}。"
+		"pl"		"Wybrany gracz nie jest {green}Kb-Restricted{white}."
+		"tr"		"Belirtilen oyuncu {green}Kb-Restricted{white} değil."
+		"it"		"Il giocatore indicato non è {green}Kb-Restricted{white}."
+		"ua"		"Вказаний гравець не {green}Kb-Restricted{white}."
+		"zho"		"指定的目標未被 {green}Kb-Restricted{white}。"
+		"cze"		"Zadaný hráč není {green}Kb-Restricted{white}."
 	}
 	"PlayerNotValid"
 	{
@@ -95,6 +143,12 @@
 		"de"		"Das angegebene Ziel ist nicht mehr {green}gültig{white}."
 		"pt"		"O alvo especificado não é mais {green}válido{white}."
 		"chi"		"指定的目标已{green}无效{white}。"
+		"pl"		"Wybrany gracz nie jest już {green}prawidłowy{white}."
+		"tr"		"Belirtilen oyuncu artık {green}geçerli {white}değil."
+		"it"		"Il giocatore indicato non è più {green}valido{white}."
+		"ua"		"Вказаний гравець більше не {green}дійсний{white}."
+		"zho"		"指定的目標已不再{green}有效{white}。"
+		"cze"		"Zadaný hráč už není {green}platný{white}."
 	}
 	"PlayerNotRestricted"
 	{
@@ -106,6 +160,12 @@
 		"de"		"{olive}{1} {white}ist derzeit nicht Kb-eingeschränkt."
 		"pt"		"{olive}{1} {white}não está Kb-Restrito no momento."
 		"chi"		"{olive}{1} {white}当前未被 Kb-Restrict。"
+		"pl"		"{olive}{1} {white}nie jest obecnie Kb-Restricted{white}."
+		"tr"		"{olive}{1} {white}şu anda Kb-Restricted değil{white}."
+		"it"		"{olive}{1} {white}al momento non è Kb-Restricted{white}."
+		"ua"		"{olive}{1} {white}зараз не Kb-Restricted{white}."
+		"zho"		"{olive}{1} {white}目前未被 Kb-Restricted{white}。"
+		"cze"		"{olive}{1} {white}momentálně není Kb-Restricted{white}."
 	}
 	"PlayerRestrcitedTemp"
 	{
@@ -117,6 +177,12 @@
 		"de"		"{olive}{1} {white}ist derzeit {fullred}vorübergehend Kb-eingeschränkt{white}."
 		"pt"		"{olive}{1} {white}está {fullred}Kb-Restrito temporariamente{white}."
 		"chi"		"{olive}{1} {white}当前被{fullred}临时 Kb-Restrict{white}。"
+		"pl"		"{olive}{1} {white}jest obecnie {fullred}tymczasowo Kb-Restricted{white}."
+		"tr"		"{olive}{1} {white}şu anda {fullred}geçici olarak Kb-Restricted{white}."
+		"it"		"{olive}{1} {white}è attualmente {fullred}Kb-Restricted temporaneamente{white}."
+		"ua"		"{olive}{1} {white}зараз {fullred}тимчасово Kb-Restricted{white}."
+		"zho"		"{olive}{1} {white}目前被 {fullred}臨時 Kb-Restricted{white}。"
+		"cze"		"{olive}{1} {white}je momentálně {fullred}dočasně Kb-Restricted{white}."
 	}
 	"PlayerRestrictedPerma"
 	{
@@ -128,6 +194,12 @@
 		"de"		"{olive}{1} {white}ist derzeit {fullred}permanent Kb-eingeschränkt{white}."
 		"pt"		"{olive}{1} {white}está {fullred}Kb-Restrito permanentemente{white}."
 		"chi"		"{olive}{1} {white}当前被{fullred}永久 Kb-Restrict{white}。"
+		"pl"		"{olive}{1} {white}jest obecnie {fullred}na stałe Kb-Restricted{white}."
+		"tr"		"{olive}{1} {white}şu anda {fullred}kalıcı olarak Kb-Restricted{white}."
+		"it"		"{olive}{1} {white}è attualmente {fullred}Kb-Restricted in modo permanente{white}."
+		"ua"		"{olive}{1} {white}зараз {fullred}назавжди Kb-Restricted{white}."
+		"zho"		"{olive}{1} {white}目前被 {fullred}永久 Kb-Restricted{white}。"
+		"cze"		"{olive}{1} {white}je momentálně {fullred}trvale Kb-Restricted{white}."
 	}
 	"RestrictTimeLeft"
 	{
@@ -139,6 +211,12 @@
 		"de"		"{olive}{1} {white}ist derzeit {fullred}Kb-eingeschränkt. {white}(Verbleibend: {2})"
 		"pt"		"{olive}{1} {white}está {fullred}Kb-Restrito. {white}(Expira em {2})"
 		"chi"		"{olive}{1} {white}当前被{fullred}Kb-Restrict。{white}（{2}后到期）"
+		"pl"		"{olive}{1} {white}jest obecnie {fullred}Kb-Restricted. {white}(Wygasa za {2})"
+		"tr"		"{olive}{1} {white}şu anda {fullred}Kb-Restricted. {white}({2} içinde sona erer)"
+		"it"		"{olive}{1} {white}è attualmente {fullred}Kb-Restricted. {white}(Scade tra {2})"
+		"ua"		"{olive}{1} {white}зараз {fullred}Kb-Restricted. {white}(Спливає через {2})"
+		"zho"		"{olive}{1} {white}目前被 {fullred}Kb-Restricted。{white}（{2} 後到期）"
+		"cze"		"{olive}{1} {white}je momentálně {fullred}Kb-Restricted. {white}(Vyprší za {2})"
 	}
 	"NotOwnBan"
 	{
@@ -149,6 +227,12 @@
 		"de"		"Du kannst keine KBans aufheben, die nicht von dir sind."
 		"pt"		"Você não pode remover KBans que não são seus."
 		"chi"		"你不能解除不是你发出的 KBan。"
+		"pl"		"Nie możesz zdjąć Kb-Restrict z KBanów, które nie są twoje."
+		"tr"		"Sana ait olmayan KBan'ların Kb-UnRestrict işlemini yapamazsın."
+		"it"		"Non puoi rimuovere i KBan che non sono tuoi."
+		"ua"		"Ви не можете зняти Kb-Restrict з KBan, які видали не ви."
+		"zho"		"你無法解除不是你發出的 KBan。"
+		"cze"		"Nemůžeš zrušit KBany, které nejsou tvoje."
 	}
 	"SteamID quotes"
 	{
@@ -159,6 +243,12 @@
 		"de"		"Bitte setze die SteamID in Anführungszeichen."
 		"pt"		"Coloque o SteamID entre aspas."
 		"chi"		"请将 SteamID 放在引号中。"
+		"pl"		"Umieść SteamID w cudzysłowie."
+		"tr"		"Lütfen SteamID'yi tırnak içine al."
+		"it"		"Metti lo SteamID tra virgolette."
+		"ua"		"Візьміть SteamID у лапки."
+		"zho"		"請將 SteamID 放在引號內。"
+		"cze"		"Dej SteamID do uvozovek."
 	}
 	"SteamIDKUnban"
 	{
@@ -170,6 +260,12 @@
 		"de"		"KBan erfolgreich entfernt von {white}{1}{green}[{white}{2}{green}]."
 		"pt"		"KBan removido com sucesso de {white}{1}{green}[{white}{2}{green}]."
 		"chi"		"已成功移除 {white}{1}{green}[{white}{2}{green}] 的 KBan。"
+		"pl"		"Pomyślnie usunięto KBan z {white}{1}{green}[{white}{2}{green}]."
+		"tr"		"{white}{1}{green}[{white}{2}{green}] için KBan başarıyla kaldırıldı."
+		"it"		"KBan rimosso con successo da {white}{1}{green}[{white}{2}{green}]."
+		"ua"		"KBan успішно знято з {white}{1}{green}[{white}{2}{green}]."
+		"zho"		"已成功移除 {white}{1}{green}[{white}{2}{green}] 的 KBan。"
+		"cze"		"KBan byl úspěšně odebrán hráči {white}{1}{green}[{white}{2}{green}]."
 	}
 	"ChatReason"
 	{
@@ -180,6 +276,12 @@
 		"de"		"Bitte gib den Grund im Chat ein."
 		"pt"		"Digite o motivo no chat."
 		"chi"		"请在聊天中输入原因。"
+		"pl"		"Wpisz powód na czacie."
+		"tr"		"Lütfen sebebi sohbete yaz."
+		"it"		"Scrivi il motivo in chat."
+		"ua"		"Введіть причину в чаті."
+		"zho"		"請在聊天中輸入原因。"
+		"cze"		"Napiš důvod do chatu."
 	}
 	"OfflineBan"
 	{
@@ -191,6 +293,12 @@
 		"de"		"Kb-Restrict erfolgreich gegen {white}{1}{green}[{white}{2}{green}]{darkblue} für {white}{3} {darkblue}Minuten verhängt ({green}Grund: {4}{darkblue})."
 		"pt"		"Kb-Restrict aplicado com sucesso em {white}{1}{green}[{white}{2}{green}]{darkblue} por {white}{3} {darkblue}minutos ({green}motivo: {4}{darkblue})."
 		"chi"		"已成功对 {white}{1}{green}[{white}{2}{green}]{darkblue} 施加 Kb-Restrict，时长 {white}{3} {darkblue}分钟（{green}原因：{4}{darkblue}）。"
+		"pl"		"Pomyślnie dodano Kb-Restrict dla {white}{1}{green}[{white}{2}{green}]{darkblue} na {white}{3} {darkblue}min ({green}powód: {4}{darkblue})."
+		"tr"		"{white}{1}{green}[{white}{2}{green}]{darkblue} için {white}{3} {darkblue}dakikalık Kb-Restrict başarıyla eklendi ({green}sebep: {4}{darkblue})."
+		"it"		"Kb-Restrict aggiunto con successo a {white}{1}{green}[{white}{2}{green}]{darkblue} per {white}{3} {darkblue}minuti ({green}motivo: {4}{darkblue})."
+		"ua"		"Kb-Restrict успішно додано для {white}{1}{green}[{white}{2}{green}]{darkblue} на {white}{3} {darkblue}хв ({green}причина: {4}{darkblue})."
+		"zho"		"已成功為 {white}{1}{green}[{white}{2}{green}]{darkblue} 添加 {white}{3} {darkblue}分鐘的 Kb-Restrict（{green}原因：{4}{darkblue}）。"
+		"cze"		"Kb-Restrict byl úspěšně přidán hráči {white}{1}{green}[{white}{2}{green}]{darkblue} na {white}{3} {darkblue}min ({green}důvod: {4}{darkblue})."
 	}
 	"Not have permission pKBan"
 	{
@@ -201,6 +309,12 @@
 		"de" 		"Du hast keine Berechtigung für permanente Kb-Restricts"
 		"pt" 		"Você não tem permissão para Kb-Restringir permanentemente"
 		"chi" 		"你没有永久 Kb-Restrict 的权限"
+		"pl"		"Nie masz uprawnień do trwałego Kb-Restrict"
+		"tr"		"Kalıcı Kb-Restrict uygulama yetkin yok"
+		"it"		"Non hai il permesso di applicare Kb-Restrict permanente"
+		"ua"		"У вас немає дозволу на постійний Kb-Restrict"
+		"zho"		"你沒有永久 Kb-Restrict 的權限"
+		"cze"		"Nemáš oprávnění k trvalému Kb-Restrict"
 	}
 	"Not have permission lKBan"
 	{
@@ -212,6 +326,12 @@
 		"de" 		"Du hast keine Berechtigung, länger als {1} Minuten Kb-Restrict zu geben"
 		"pt" 		"Você não tem permissão para Kb-Restringir por mais de {1} minutos"
 		"chi" 		"你没有超过 {1} 分钟 Kb-Restrict 的权限"
+		"pl"		"Nie masz uprawnień do Kb-Restrict dłuższego niż {1} min"
+		"tr"		"{1} dakikadan uzun Kb-Restrict uygulama yetkin yok"
+		"it"		"Non hai il permesso di applicare Kb-Restrict per più di {1} minuti"
+		"ua"		"У вас немає дозволу на Kb-Restrict довше ніж {1} хв"
+		"zho"		"你沒有超過 {1} 分鐘的 Kb-Restrict 權限"
+		"cze"		"Nemáš oprávnění k Kb-Restrict delšímu než {1} min"
 	}
 	"PlayerConnect"
 	{
@@ -223,6 +343,12 @@
 		"de"		"{olive}{1} {white}hat {olive}{2} {white}frühere KBans."
 		"pt"		"{olive}{1} {white}tem {olive}{2} {white}kbans anteriores."
 		"chi"		"{olive}{1} {white}此前有 {olive}{2} {white}次 kban 记录。"
+		"pl"		"{olive}{1} {white}ma {olive}{2} {white}poprzednich kbanów."
+		"tr"		"{olive}{1} {white}oyuncusunun {olive}{2} {white}önceki kban kaydı var."
+		"it"		"{olive}{1} {white}ha {olive}{2} {white}kban precedenti."
+		"ua"		"{olive}{1} {white}має {olive}{2} {white}попередніх kban."
+		"zho"		"{olive}{1} {white}有 {olive}{2} {white}次先前的 kban 記錄。"
+		"cze"		"{olive}{1} {white}má {olive}{2} {white}předchozích kbanů."
 	}
 
 	// Menu
@@ -235,6 +361,12 @@
 		"de"		"Derzeit können keine Spieler eingeschränkt werden."
 		"pt"		"Nenhum jogador pode ser restrito no momento."
 		"chi"		"当前没有可限制的玩家。"
+		"pl"		"W tej chwili nie można ograniczyć żadnego gracza."
+		"tr"		"Şu anda kısıtlanabilecek oyuncu yok."
+		"it"		"Al momento nessun giocatore può essere limitato."
+		"ua"		"Наразі немає гравців, яких можна обмежити."
+		"zho"		"目前沒有可以限制的玩家。"
+		"cze"		"Momentálně nelze omezit žádného hráče."
 	}
 	"Commands"
 	{
@@ -245,6 +377,12 @@
 		"de"		"Befehle"
 		"pt"		"Comandos"
 		"chi"		"命令"
+		"pl"		"Komendy"
+		"tr"		"Komutlar"
+		"it"		"Comandi"
+		"ua"		"Команди"
+		"zho"		"指令"
+		"cze"		"Příkazy"
 	}
 	"KBan a player"
 	{
@@ -255,6 +393,12 @@
 		"de"		"Spieler KBannen"
 		"pt"		"Aplicar KBan em um jogador"
 		"chi"		"KBan 玩家"
+		"pl"		"KBan gracza"
+		"tr"		"Bir oyuncuya KBan at"
+		"it"		"KBan a un giocatore"
+		"ua"		"KBan гравця"
+		"zho"		"KBan 玩家"
+		"cze"		"KBan hráče"
 	}
 	"List of KBans"
 	{
@@ -265,6 +409,12 @@
 		"de"		"KBan-Liste"
 		"pt"		"Lista de KBans"
 		"chi"		"KBan 列表"
+		"pl"		"Lista KBanów"
+		"tr"		"KBan listesi"
+		"it"		"Elenco dei KBan"
+		"ua"		"Список KBan"
+		"zho"		"KBan 列表"
+		"cze"		"Seznam KBanů"
 	}
 	"Offline Kban"
 	{
@@ -275,6 +425,12 @@
 		"de"		"Offline-KBan"
 		"pt"		"KBan offline"
 		"chi"		"离线 KBan"
+		"pl"		"KBan offline"
+		"tr"		"Çevrimdışı KBan"
+		"it"		"KBan offline"
+		"ua"		"Офлайн KBan"
+		"zho"		"離線 KBan"
+		"cze"		"Offline KBan"
 	}
 	"Not have permission KbList"
 	{
@@ -285,6 +441,12 @@
 		"de"		"Du hast keinen Zugriff auf die KBan-Liste."
 		"pt"		"Você não tem acesso à lista de KBans."
 		"chi"		"你无权查看 KBan 列表。"
+		"pl"		"Nie masz dostępu do listy KBanów."
+		"tr"		"KBan listesini görüntüleme erişimin yok."
+		"it"		"Non hai accesso all'elenco dei KBan."
+		"ua"		"У вас немає доступу до списку KBan."
+		"zho"		"你沒有查看 KBan 列表的權限。"
+		"cze"		"Nemáš přístup k seznamu KBanů."
 	}
 	"Online KBanned"
 	{
@@ -295,6 +457,12 @@
 		"de"		"Spieler mit KBan (online)"
 		"pt"		"KBanidos online"
 		"chi"		"在线 KBan 玩家"
+		"pl"		"KBan online"
+		"tr"		"Çevrimiçi KBan'lılar"
+		"it"		"KBan online"
+		"ua"		"Онлайн KBan"
+		"zho"		"線上 KBan"
+		"cze"		"Online KBan"
 	}
 	"Own KbList"
 	{
@@ -305,6 +473,12 @@
 		"de"		"Deine vergebenen KBans"
 		"pt"		"Lista dos seus KBans"
 		"chi"		"你发出的 KBan 列表"
+		"pl"		"Lista wystawionych przez ciebie KBanów"
+		"tr"		"Verdiğin KBan'ların listesi"
+		"it"		"Elenco dei KBan che hai emesso"
+		"ua"		"Список виданих вами KBan"
+		"zho"		"你發出的 KBan 列表"
+		"cze"		"Seznam KBanů, které jsi udělil"
 	}
 	"Restrict a Player"
 	{
@@ -315,6 +489,12 @@
 		"de"		"Spieler einschränken"
 		"pt"		"Restringir um jogador"
 		"chi"		"限制玩家"
+		"pl"		"Ogranicz gracza"
+		"tr"		"Oyuncuyu kısıtla"
+		"it"		"Limita un giocatore"
+		"ua"		"Обмежити гравця"
+		"zho"		"限制玩家"
+		"cze"		"Omezit hráče"
 	}
 	"All Active KBans"
 	{
@@ -325,6 +505,12 @@
 		"de"		"Alle aktiven KBans"
 		"pt"		"Todos os KBans ativos"
 		"chi"		"所有生效的 KBan"
+		"pl"		"Wszystkie aktywne KBany"
+		"tr"		"Tüm aktif KBan'lar"
+		"it"		"Tutti i KBan attivi"
+		"ua"		"Усі активні KBan"
+		"zho"		"所有有效的 KBan"
+		"cze"		"Všechny aktivní KBany"
 	}
 	"Offline"
 	{
@@ -335,6 +521,12 @@
 		"de"		"Offline"
 		"pt"		"Offline"
 		"chi"		"离线"
+		"pl"		"Offline"
+		"tr"		"Çevrimdışı"
+		"it"		"Offline"
+		"ua"		"Офлайн"
+		"zho"		"離線"
+		"cze"		"Offline"
 	}
 	"Online"
 	{
@@ -345,6 +537,12 @@
 		"de"		"Online"
 		"pt"		"Online"
 		"chi"		"在线"
+		"pl"		"Online"
+		"tr"		"Çevrimiçi"
+		"it"		"Online"
+		"ua"		"Онлайн"
+		"zho"		"線上"
+		"cze"		"Online"
 	}
 	"No KBan Found"
 	{
@@ -355,6 +553,12 @@
 		"de"		"Kein KBan gefunden!"
 		"pt"		"Nenhum KBan encontrado!"
 		"chi"		"未找到 KBan！"
+		"pl"		"Nie znaleziono KBana!"
+		"tr"		"KBan bulunamadı!"
+		"it"		"Nessun KBan trovato!"
+		"ua"		"KBan не знайдено!"
+		"zho"		"未找到 KBan！"
+		"cze"		"Žádný KBan nenalezen!"
 	}
 	"Infos and Actions"
 	{
@@ -366,6 +570,12 @@
 		"de"		"Infos und Aktionen für {1}"
 		"pt"		"Infos e ações de {1}"
 		"chi"		"{1} 的信息与操作"
+		"pl"		"Informacje i akcje dla {1}"
+		"tr"		"{1} için bilgiler ve işlemler"
+		"it"		"Info e azioni per {1}"
+		"ua"		"Інформація та дії для {1}"
+		"zho"		"{1} 的資訊與操作"
+		"cze"		"Informace a akce pro {1}"
 	}
 	"Permanent"
 	{
@@ -376,6 +586,12 @@
 		"de"		"Permanent"
 		"pt"		"Permanente"
 		"chi"		"永久"
+		"pl"		"Stały"
+		"tr"		"Kalıcı"
+		"it"		"Permanente"
+		"ua"		"Постійний"
+		"zho"		"永久"
+		"cze"		"Trvalý"
 	}
 	"Permanently"
 	{
@@ -386,6 +602,12 @@
 		"de"		"Permanent"
 		"pt"		"Permanentemente"
 		"chi"		"永久"
+		"pl"		"Na stałe"
+		"tr"		"Kalıcı olarak"
+		"it"		"In modo permanente"
+		"ua"		"Назавжди"
+		"zho"		"永久"
+		"cze"		"Trvale"
 	}
 	"Temporary"
 	{
@@ -396,6 +618,12 @@
 		"de"		"Vorübergehend"
 		"pt"		"Temporário"
 		"chi"		"临时"
+		"pl"		"Tymczasowy"
+		"tr"		"Geçici"
+		"it"		"Temporaneo"
+		"ua"		"Тимчасовий"
+		"zho"		"臨時"
+		"cze"		"Dočasný"
 	}
 	"Never"
 	{
@@ -406,6 +634,12 @@
 		"de"		"Nie"
 		"pt"		"Nunca"
 		"chi"		"永不"
+		"pl"		"Nigdy"
+		"tr"		"Asla"
+		"it"		"Mai"
+		"ua"		"Ніколи"
+		"zho"		"永不"
+		"cze"		"Nikdy"
 	}
 	"Until Map End"
 	{
@@ -416,6 +650,12 @@
 		"de"		"Bis zum Mapende"
 		"pt"		"Até o fim do mapa"
 		"chi"		"直到地图结束"
+		"pl"		"Do końca mapy"
+		"tr"		"Harita sonuna kadar"
+		"it"		"Fino alla fine della mappa"
+		"ua"		"До кінця мапи"
+		"zho"		"直到地圖結束"
+		"cze"		"Do konce mapy"
 	}
 	"Second"
 	{
@@ -427,6 +667,12 @@
 		"de"		"{1} Sekunde"
 		"pt"		"{1} segundo"
 		"chi"		"{1} 秒"
+		"pl"		"{1} sekunda"
+		"tr"		"{1} saniye"
+		"it"		"{1} secondo"
+		"ua"		"{1} секунда"
+		"zho"		"{1} 秒"
+		"cze"		"{1} sekunda"
 	}
 	"Seconds"
 	{
@@ -438,6 +684,12 @@
 		"de"		"{1} Sekunden"
 		"pt"		"{1} segundos"
 		"chi"		"{1} 秒"
+		"pl"		"{1} sek."
+		"tr"		"{1} saniye"
+		"it"		"{1} secondi"
+		"ua"		"{1} сек."
+		"zho"		"{1} 秒"
+		"cze"		"{1} sek."
 	}
 	"Minute"
 	{
@@ -449,6 +701,12 @@
 		"de"		"{1} Minute"
 		"pt"		"{1} minuto"
 		"chi"		"{1} 分钟"
+		"pl"		"{1} minuta"
+		"tr"		"{1} dakika"
+		"it"		"{1} minuto"
+		"ua"		"{1} хвилина"
+		"zho"		"{1} 分鐘"
+		"cze"		"{1} minuta"
 	}
 	"Minutes"
 	{
@@ -460,6 +718,12 @@
 		"de"		"{1} Minuten"
 		"pt"		"{1} minutos"
 		"chi"		"{1} 分钟"
+		"pl"		"{1} min."
+		"tr"		"{1} dakika"
+		"it"		"{1} minuti"
+		"ua"		"{1} хв."
+		"zho"		"{1} 分鐘"
+		"cze"		"{1} min."
 	}
 	"Hour"
 	{
@@ -471,6 +735,12 @@
 		"de"		"{1} Stunde"
 		"pt"		"{1} hora"
 		"chi"		"{1} 小时"
+		"pl"		"{1} godzina"
+		"tr"		"{1} saat"
+		"it"		"{1} ora"
+		"ua"		"{1} година"
+		"zho"		"{1} 小時"
+		"cze"		"{1} hodina"
 	}
 	"Hours"
 	{
@@ -482,6 +752,12 @@
 		"de"		"{1} Stunden"
 		"pt"		"{1} horas"
 		"chi"		"{1} 小时"
+		"pl"		"{1} godz."
+		"tr"		"{1} saat"
+		"it"		"{1} ore"
+		"ua"		"{1} год."
+		"zho"		"{1} 小時"
+		"cze"		"{1} hod."
 	}
 	"Day"
 	{
@@ -493,6 +769,12 @@
 		"de"		"{1} Tag"
 		"pt"		"{1} dia"
 		"chi"		"{1} 天"
+		"pl"		"{1} dzień"
+		"tr"		"{1} gün"
+		"it"		"{1} giorno"
+		"ua"		"{1} день"
+		"zho"		"{1} 天"
+		"cze"		"{1} den"
 	}
 	"Days"
 	{
@@ -504,6 +786,12 @@
 		"de"		"{1} Tage"
 		"pt"		"{1} dias"
 		"chi"		"{1} 天"
+		"pl"		"{1} dni"
+		"tr"		"{1} gün"
+		"it"		"{1} giorni"
+		"ua"		"{1} дн."
+		"zho"		"{1} 天"
+		"cze"		"{1} dní"
 	}
 	"Week"
 	{
@@ -515,6 +803,12 @@
 		"de"		"{1} Woche"
 		"pt"		"{1} semana"
 		"chi"		"{1} 周"
+		"pl"		"{1} tydzień"
+		"tr"		"{1} hafta"
+		"it"		"{1} settimana"
+		"ua"		"{1} тиждень"
+		"zho"		"{1} 週"
+		"cze"		"{1} týden"
 	}
 	"Weeks"
 	{
@@ -526,6 +820,12 @@
 		"de"		"{1} Wochen"
 		"pt"		"{1} semanas"
 		"chi"		"{1} 周"
+		"pl"		"{1} tyg."
+		"tr"		"{1} hafta"
+		"it"		"{1} settimane"
+		"ua"		"{1} тиж."
+		"zho"		"{1} 週"
+		"cze"		"{1} týd."
 	}
 	"Month"
 	{
@@ -537,6 +837,12 @@
 		"de"		"{1} Monat"
 		"pt"		"{1} mês"
 		"chi"		"{1} 个月"
+		"pl"		"{1} miesiąc"
+		"tr"		"{1} ay"
+		"it"		"{1} mese"
+		"ua"		"{1} місяць"
+		"zho"		"{1} 個月"
+		"cze"		"{1} měsíc"
 	}
 	"Months"
 	{
@@ -548,6 +854,12 @@
 		"de"		"{1} Monate"
 		"pt"		"{1} meses"
 		"chi"		"{1} 个月"
+		"pl"		"{1} mies."
+		"tr"		"{1} ay"
+		"it"		"{1} mesi"
+		"ua"		"{1} міс."
+		"zho"		"{1} 個月"
+		"cze"		"{1} měs."
 	}
 	"Player Name"
 	{
@@ -559,6 +871,12 @@
 		"de"		"Spielername: {1}"
 		"pt"		"Nome do jogador: {1}"
 		"chi"		"玩家名称：{1}"
+		"pl"		"Nazwa gracza: {1}"
+		"tr"		"Oyuncu adı: {1}"
+		"it"		"Nome giocatore: {1}"
+		"ua"		"Ім'я гравця: {1}"
+		"zho"		"玩家名稱：{1}"
+		"cze"		"Jméno hráče: {1}"
 	}
 	"Player SteamID"
 	{
@@ -570,6 +888,12 @@
 		"de"		"SteamID des Spielers: {1}"
 		"pt"		"SteamID do jogador: {1}"
 		"chi"		"玩家 SteamID：{1}"
+		"pl"		"SteamID gracza: {1}"
+		"tr"		"Oyuncu SteamID: {1}"
+		"it"		"SteamID giocatore: {1}"
+		"ua"		"SteamID гравця: {1}"
+		"zho"		"玩家 SteamID：{1}"
+		"cze"		"SteamID hráče: {1}"
 	}
 	"Admin Name"
 	{
@@ -581,6 +905,12 @@
 		"de"		"Admin-Name: {1}"
 		"pt"		"Nome do admin: {1}"
 		"chi"		"管理员名称：{1}"
+		"pl"		"Nazwa admina: {1}"
+		"tr"		"Yönetici adı: {1}"
+		"it"		"Nome admin: {1}"
+		"ua"		"Ім'я адміна: {1}"
+		"zho"		"管理員名稱：{1}"
+		"cze"		"Jméno admina: {1}"
 	}
 	"Admin SteamID"
 	{
@@ -592,6 +922,12 @@
 		"de"		"SteamID des Admins: {1}"
 		"pt"		"SteamID do admin: {1}"
 		"chi"		"管理员 SteamID：{1}"
+		"pl"		"SteamID admina: {1}"
+		"tr"		"Yönetici SteamID: {1}"
+		"it"		"SteamID admin: {1}"
+		"ua"		"SteamID адміна: {1}"
+		"zho"		"管理員 SteamID：{1}"
+		"cze"		"SteamID admina: {1}"
 	}
 	"Reason"
 	{
@@ -603,6 +939,12 @@
 		"de"		"Grund: {1}"
 		"pt"		"Motivo: {1}"
 		"chi"		"原因：{1}"
+		"pl"		"Powód: {1}"
+		"tr"		"Sebep: {1}"
+		"it"		"Motivo: {1}"
+		"ua"		"Причина: {1}"
+		"zho"		"原因：{1}"
+		"cze"		"Důvod: {1}"
 	}
 	"Issued Map"
 	{
@@ -614,6 +956,12 @@
 		"de"		"Vergeben auf Map: {1}"
 		"pt"		"Aplicado no mapa: {1}"
 		"chi"		"发出时地图：{1}"
+		"pl"		"Wystawiono na mapie: {1}"
+		"tr"		"Verildiği harita: {1}"
+		"it"		"Emesso sulla mappa: {1}"
+		"ua"		"Видано на мапі: {1}"
+		"zho"		"發出地圖：{1}"
+		"cze"		"Uděleno na mapě: {1}"
 	}
 	"Duration"
 	{
@@ -625,6 +973,12 @@
 		"de"		"Dauer: {1}"
 		"pt"		"Duração: {1}"
 		"chi"		"时长：{1}"
+		"pl"		"Czas trwania: {1}"
+		"tr"		"Süre: {1}"
+		"it"		"Durata: {1}"
+		"ua"		"Тривалість: {1}"
+		"zho"		"時長：{1}"
+		"cze"		"Doba trvání: {1}"
 	}
 	"Date Issued"
 	{
@@ -636,6 +990,12 @@
 		"de"		"Ausgestellt am: {1}"
 		"pt"		"Data de emissão: {1}"
 		"chi"		"发出日期：{1}"
+		"pl"		"Data wystawienia: {1}"
+		"tr"		"Veriliş tarihi: {1}"
+		"it"		"Data di emissione: {1}"
+		"ua"		"Дата видачі: {1}"
+		"zho"		"發出日期：{1}"
+		"cze"		"Datum udělení: {1}"
 	}
 	"Date Expires"
 	{
@@ -647,6 +1007,12 @@
 		"de"		"Ablaufdatum: {1}"
 		"pt"		"Data de expiração: {1}"
 		"chi"		"到期日期：{1}"
+		"pl"		"Data wygaśnięcia: {1}"
+		"tr"		"Bitiş tarihi: {1}"
+		"it"		"Data di scadenza: {1}"
+		"ua"		"Дата закінчення: {1}"
+		"zho"		"到期日期：{1}"
+		"cze"		"Datum vypršení: {1}"
 	}
 	"UnRestrict Player"
 	{
@@ -657,6 +1023,12 @@
 		"de"		"KBan des Spielers aufheben"
 		"pt"		"Remover KBan do jogador"
 		"chi"		"解除玩家 KBan"
+		"pl"		"Zdejmij KBan z gracza"
+		"tr"		"Oyuncunun KBan'ını kaldır"
+		"it"		"Rimuovi KBan al giocatore"
+		"ua"		"Зняти KBan з гравця"
+		"zho"		"解除玩家 KBan"
+		"cze"		"Zrušit KBan hráči"
 	}
 	"KBan Duration"
 	{
@@ -668,6 +1040,12 @@
 		"de"		"KBan-Dauer für {1}"
 		"pt"		"Duração do KBan para {1}"
 		"chi"		"{1} 的 KBan 时长"
+		"pl"		"Czas KBana dla {1}"
+		"tr"		"{1} için KBan süresi"
+		"it"		"Durata del KBan per {1}"
+		"ua"		"Тривалість KBan для {1}"
+		"zho"		"{1} 的 KBan 時長"
+		"cze"		"Doba KBanu pro {1}"
 	}
 	"KBan Reason for"
 	{
@@ -679,6 +1057,12 @@
 		"de"		"KBan-Grund für {1} [{2} Minuten]"
 		"pt"		"Motivo do KBan para {1} [{2} minutos]"
 		"chi"		"{1} 的 KBan 原因 [{2} 分钟]"
+		"pl"		"Powód KBana dla {1} [{2} min]"
+		"tr"		"{1} için KBan sebebi [{2} dakika]"
+		"it"		"Motivo del KBan per {1} [{2} minuti]"
+		"ua"		"Причина KBan для {1} [{2} хв]"
+		"zho"		"{1} 的 KBan 原因 [{2} 分鐘]"
+		"cze"		"Důvod KBanu pro {1} [{2} min]"
 	}
 	"PlayerNotVerified"
 	{
@@ -690,6 +1074,12 @@
 		"de"			"{1} wurde noch nicht verifiziert. Bitte warte dreißig Sekunden, bevor du es erneut versuchst."
 		"pt"			"{1} ainda não foi verificado. Aguarde trinta segundos antes de tentar novamente."
 		"chi"			"{1} 尚未通过验证。请等待三十秒后再试。"
+		"pl"		"{1} nie został jeszcze zweryfikowany. Odczekaj trzydzieści sekund i spróbuj ponownie."
+		"tr"		"{1} henüz doğrulanmadı. Lütfen yeniden denemeden önce otuz saniye bekle."
+		"it"		"{1} non è ancora stato verificato. Attendi trenta secondi prima di riprovare."
+		"ua"		"{1} ще не пройшов перевірку. Зачекайте тридцять секунд і спробуйте ще раз."
+		"zho"		"{1} 尚未通過驗證。請等待三十秒後再試。"
+		"cze"		"{1} nebyl ověřen. Počkej třicet sekund a zkus to znovu."
 	}
 	"KbanPendingDB"
 	{
@@ -700,6 +1090,12 @@
 		"de"			"Die Datenbank ist nicht erreichbar: Der {green}Kb-Restrict{white} gilt ab sofort und wird gespeichert, sobald die Verbindung wieder steht."
 		"pt"			"O banco de dados está indisponível: o {green}Kb-Restrict{white} foi aplicado agora e será salvo quando a conexão voltar."
 		"chi"			"数据库不可用：{green}Kb-Restrict{white} 已立即生效，将在连接恢复后保存。"
+		"pl"		"Baza danych jest niedostępna: {green}Kb-Restrict{white} działa już teraz i zostanie zapisany po przywróceniu połączenia."
+		"tr"		"Veritabanı kullanılamıyor: {green}Kb-Restrict{white} şimdi uygulandı ve bağlantı geri geldiğinde kaydedilecek."
+		"it"		"Il database non è disponibile: il {green}Kb-Restrict{white} è applicato ora e verrà salvato al ripristino della connessione."
+		"ua"		"База даних недоступна: {green}Kb-Restrict{white} уже застосовано і буде збережено після відновлення з'єднання."
+		"zho"		"資料庫無法使用：{green}Kb-Restrict{white} 已立即生效，連線恢復後將會儲存。"
+		"cze"		"Databáze není dostupná: {green}Kb-Restrict{white} je použit hned a uloží se po obnovení připojení."
 	}
 
 	"KunbanDBUnavailable"
@@ -711,6 +1107,12 @@
 		"de"			"Die Datenbank ist nicht erreichbar: Offline-{green}Kb-UnRestrict{white} kann nicht gespeichert werden, versuche es später erneut."
 		"pt"			"O banco de dados está indisponível: o {green}Kb-UnRestrict{white} offline não pode ser salvo, tente mais tarde."
 		"chi"			"数据库不可用：离线 {green}Kb-UnRestrict{white} 无法保存，请稍后再试。"
+		"pl"		"Baza danych jest niedostępna: nie można zapisać {green}Kb-UnRestrict{white} dla gracza offline, spróbuj ponownie później."
+		"tr"		"Veritabanı kullanılamıyor: çevrimdışı {green}Kb-UnRestrict{white} kaydedilemiyor, daha sonra tekrar dene."
+		"it"		"Il database non è disponibile: non è possibile salvare il {green}Kb-UnRestrict{white} offline, riprova più tardi."
+		"ua"		"База даних недоступна: офлайн {green}Kb-UnRestrict{white} неможливо зберегти, спробуйте пізніше."
+		"zho"		"資料庫無法使用：無法儲存離線 {green}Kb-UnRestrict{white}，請稍後再試。"
+		"cze"		"Databáze není dostupná: offline {green}Kb-UnRestrict{white} nelze uložit, zkus to později."
 	}
 
 	"Usage kban"
@@ -722,6 +1124,12 @@
 		"de"		"Verwendung: sm_kban <Spieler> <Dauer> <Grund>"
 		"pt"		"Uso: sm_kban <jogador> <duração> <motivo>"
 		"chi"		"用法：sm_kban <玩家> <时长> <原因>"
+		"pl"		"Użycie: sm_kban <gracz> <czas> <powód>"
+		"tr"		"Kullanım: sm_kban <oyuncu> <süre> <sebep>"
+		"it"		"Uso: sm_kban <giocatore> <durata> <motivo>"
+		"ua"		"Використання: sm_kban <гравець> <тривалість> <причина>"
+		"zho"		"用法：sm_kban <玩家> <時長> <原因>"
+		"cze"		"Použití: sm_kban <hráč> <doba> <důvod>"
 	}
 
 	"Usage kunban"
@@ -733,6 +1141,12 @@
 		"de"		"Verwendung: sm_kunban <Spieler> <Grund>."
 		"pt"		"Uso: sm_kunban <jogador> <motivo>."
 		"chi"		"用法：sm_kunban <玩家> <原因>。"
+		"pl"		"Użycie: sm_kunban <gracz> <powód>."
+		"tr"		"Kullanım: sm_kunban <oyuncu> <sebep>."
+		"it"		"Uso: sm_kunban <giocatore> <motivo>."
+		"ua"		"Використання: sm_kunban <гравець> <причина>."
+		"zho"		"用法：sm_kunban <玩家> <原因>。"
+		"cze"		"Použití: sm_kunban <hráč> <důvod>."
 	}
 
 	"Usage koban"
@@ -744,6 +1158,12 @@
 		"de"		"Verwendung: sm_koban <Spieler> <Zeit> <Grund>"
 		"pt"		"Uso: sm_koban <jogador> <tempo> <motivo>"
 		"chi"		"用法：sm_koban <玩家> <时间> <原因>"
+		"pl"		"Użycie: sm_koban <gracz> <czas> <powód>"
+		"tr"		"Kullanım: sm_koban <oyuncu> <süre> <sebep>"
+		"it"		"Uso: sm_koban <giocatore> <tempo> <motivo>"
+		"ua"		"Використання: sm_koban <гравець> <час> <причина>"
+		"zho"		"用法：sm_koban <玩家> <時間> <原因>"
+		"cze"		"Použití: sm_koban <hráč> <čas> <důvod>"
 	}
 
 	"No matched client"
@@ -755,6 +1175,12 @@
 		"de"		"Kein passender Spieler gefunden."
 		"pt"		"Nenhum jogador correspondente encontrado."
 		"chi"		"未找到匹配的玩家。"
+		"pl"		"Nie znaleziono pasującego gracza."
+		"tr"		"Eşleşen oyuncu bulunamadı."
+		"it"		"Nessun giocatore corrispondente trovato."
+		"ua"		"Відповідного гравця не знайдено."
+		"zho"		"找不到符合的玩家。"
+		"cze"		"Nebyl nalezen žádný odpovídající hráč."
 	}
 
 	"Kban Main Menu"
@@ -766,6 +1192,12 @@
 		"de"		"KBan-Hauptmenü"
 		"pt"		"Menu principal do KBan"
 		"chi"		"KBan 主菜单"
+		"pl"		"Główne menu Kban"
+		"tr"		"Kban ana menüsü"
+		"it"		"Menu principale Kban"
+		"ua"		"Головне меню Kban"
+		"zho"		"Kban 主選單"
+		"cze"		"Hlavní menu Kban"
 	}
 
 	"No Offline Players"
@@ -777,6 +1209,12 @@
 		"de"		"Keine Offline-Spieler"
 		"pt"		"Nenhum jogador offline"
 		"chi"		"没有离线玩家"
+		"pl"		"Brak graczy offline"
+		"tr"		"Çevrimdışı oyuncu yok"
+		"it"		"Nessun giocatore offline"
+		"ua"		"Немає офлайн-гравців"
+		"zho"		"沒有離線玩家"
+		"cze"		"Žádní offline hráči"
 	}
 
 	"Reason too short"
@@ -788,6 +1226,12 @@
 		"de"		"Der Grund muss länger als 3 Zeichen sein!"
 		"pt"		"O motivo precisa ter mais de 3 caracteres!"
 		"chi"		"原因必须超过 3 个字符！"
+		"pl"		"Powód musi mieć ponad 3 znaki!"
+		"tr"		"Sebep 3 karakterden uzun olmalı!"
+		"it"		"Il motivo deve avere più di 3 caratteri!"
+		"ua"		"Причина має містити понад 3 символи!"
+		"zho"		"原因必須超過 3 個字元！"
+		"cze"		"Důvod musí mít více než 3 znaky!"
 	}
 
 	"Custom Reason"
@@ -799,5 +1243,11 @@
 		"de"		"Eigener Grund"
 		"pt"		"Motivo personalizado"
 		"chi"		"自定义原因"
+		"pl"		"Własny powód"
+		"tr"		"Özel sebep"
+		"it"		"Motivo personalizzato"
+		"ua"		"Власна причина"
+		"zho"		"自訂原因"
+		"cze"		"Vlastní důvod"
 	}
 }
